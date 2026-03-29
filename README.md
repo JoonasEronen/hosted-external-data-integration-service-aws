@@ -33,9 +33,9 @@ The focus is on **clean architecture, networking fundamentals, automation, and o
 1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)
 2. ALB routes traffic to a FastAPI application running on a private EC2 instance
 3. The application scheduler periodically fetches data from an external API via NAT Gateway
-4. Application stores historical data in Amazon RDS PostgreSQL  
-5. Amazon CloudWatch collects logs and operational metrics  
-6. CloudWatch alarm detects failures or unhealthy conditions  
+4. Future iteration: application stores historical data in Amazon RDS PostgreSQL
+5. Amazon CloudWatch provides logging and operational visibility
+6. Future iteration: CloudWatch alarms detect failures or unhealthy conditions
 
 In this project, a public API (such as weather data) is used only to simulate a continuous external data stream.  
 The weather data itself is not the goal of the system.
@@ -188,21 +188,23 @@ Trade-off:
 
 All infrastructure is defined using **Terraform**.
 
-Infrastructure components:
+Current MVP infrastructure:
 
 - VPC  
-- Public subnet  
-- Private application subnet  
-- Private database subnet  
+- Public subnets (multi-AZ)  
+- Private application subnets (multi-AZ)  
 - Internet Gateway  
 - NAT Gateway  
 - Route tables  
 - Application Load Balancer  
-- EC2 instance  
-- IAM roles  
-- RDS PostgreSQL  
+- Private EC2 instance  
 - Security groups  
-- CloudWatch logs and alarm  
+
+Planned next:
+- RDS PostgreSQL
+- Background ingestion scheduler
+- CloudWatch alarms
+- Multi-AZ application tier
 
 Principles:
 
@@ -263,12 +265,12 @@ HTTP response through ALB:
 
 ## Operational Considerations
 
-Basic operational visibility:
+Planned operational visibility:
 
 - Structured logs in CloudWatch  
 - Background ingestion logging  
 - Health endpoint  
-- CloudWatch alarm  
+- CloudWatch alarms   
 
 Future additions:
 
@@ -340,4 +342,4 @@ Improved resilience and scaling
 
 This project represents a **production-style hosted external data integration service** built inside an AWS VPC with controlled networking, persistent storage, and operational monitoring.
 
-Next step: Terraform networking implementation.
+Next step: Implement FastAPI service and connect RDS storage
