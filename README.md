@@ -1,11 +1,11 @@
 # Hosted External Data Integration Service (AWS)
 
-> **Project status**  
-> MVP architecture defined and documented.  
-> Designed as a production-style hosted integration service running inside a VPC.  
-> Multi-AZ network foundation with single-instance application tier.  
-> Additional EC2 instance in a second Availability Zone planned for high-availability expansion.
-> Focuses on realistic networking, always-on compute, and operational visibility.
+### Project status: In progress  
+- MVP architecture defined and documented.  
+- Designed as a production-style hosted integration service running inside a VPC.  
+- Multi-AZ network foundation with single-instance application tier.  
+- Additional EC2 instance in a second Availability Zone planned for high-availability expansion.  
+- Focuses on realistic networking, always-on compute, and operational visibility.  
 
 ---
 
@@ -316,10 +316,10 @@ Project 2:
 The project is intentionally built in **iterations**:
 
 Iteration 1:
-Multi-AZ network, single-instance application
+Network foundation + single-instance application ingress
 
 Iteration 2:
-Multi-AZ application tier
+Application layer + database integration
 
 Iteration 3:
 Improved resilience and scaling
