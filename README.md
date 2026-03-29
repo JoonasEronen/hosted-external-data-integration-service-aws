@@ -3,8 +3,8 @@
 > **Project status**  
 > MVP architecture defined and documented.  
 > Designed as a production-style hosted integration service running inside a VPC.  
-> Single Availability Zone deployment in the first iteration.  
-> Second Availability Zone planned for high-availability expansion.  
+> Multi-AZ network foundation with single-instance application tier.  
+> Additional EC2 instance in a second Availability Zone planned for high-availability expansion.
 > Focuses on realistic networking, always-on compute, and operational visibility.
 
 ---
@@ -26,13 +26,13 @@ The focus is on **clean architecture, networking fundamentals, automation, and o
 
 ## Architecture Overview
 
-![Architecture](docs/architecture/architecture-v1-single-az-mvp.png)
+![Architecture](docs/architecture/architecture-v1-multi-az-mvp.png)
 
 ### Flow
 
-1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)  
-2. ALB forwards traffic to a FastAPI application running on a private EC2 instance  
-3. Background scheduler periodically fetches data from an external API  
+1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)
+2. ALB routes traffic to a FastAPI application running on a private EC2 instance
+3. The application scheduler periodically fetches data from an external API via NAT Gateway
 4. Application stores historical data in Amazon RDS PostgreSQL  
 5. Amazon CloudWatch collects logs and operational metrics  
 6. CloudWatch alarm detects failures or unhealthy conditions  
@@ -172,15 +172,15 @@ Trade-off:
 
 ---
 
-### Single-AZ MVP first
+### Multi-AZ network with single-instance MVP
 
 Pros:
-- Faster to build  
-- Easier debugging  
-- Clear iteration path  
+- Realistic production VPC layout  
+- Future-ready for high availability  
+- Faster MVP implementation  
 
 Trade-off:
-- Not highly available initially
+- Application tier not highly available yet
 
 ---
 
@@ -188,7 +188,7 @@ Trade-off:
 
 All infrastructure is defined using **Terraform**.
 
-Planned resources:
+Infrastructure components:
 
 - VPC  
 - Public subnet  
@@ -242,16 +242,22 @@ This models a **production-style infrastructure workflow**.
 
 ---
 
-## Proof of Deployment
+## MVP Deployment Check
 
-Planned validation:
+Initial infrastructure MVP validated after Terraform deployment.
 
-- Dashboard accessible through ALB  
-- CloudWatch logs show ingestion runs  
-- RDS shows stored historical data  
-- CI/CD terraform deploy screenshots  
+- Application Load Balancer deployed
+- Private EC2 instance registered behind the ALB
+- Target group health check passing
+- End-to-end HTTP request returned `200 OK`
 
-Screenshots will be added after deployment.
+Target group health:
+
+![Target healthy](docs/screenshots/mvp-target-group-healthy.png)
+
+HTTP response through ALB:
+
+![HTTP 200](docs/screenshots/mvp-http-200.png)
 
 ---
 
@@ -267,7 +273,7 @@ Basic operational visibility:
 Future additions:
 
 - Error rate alarms  
-- Multi-AZ deployment  
+- Multi-AZ application tier  
 - Auto Scaling  
 - Advanced monitoring  
 
@@ -277,7 +283,7 @@ Future additions:
 
 Not included in MVP:
 
-- Multi-AZ deployment  
+- Multi-AZ application tier
 - Auto Scaling Group  
 - Advanced authentication  
 - Complex frontend  
@@ -308,7 +314,7 @@ Project 2:
 The project is intentionally built in **iterations**:
 
 Iteration 1:
-Single AZ MVP
+Multi-AZ network, single-instance application
 
 Iteration 2:
 Multi-AZ application tier
@@ -321,10 +327,12 @@ Improved resilience and scaling
 ## Current State
 
 - Architecture defined  
-- MVP single-AZ design complete  
+- Multi-AZ network MVP design complete  
+- Single-instance application tier  
 - Multi-AZ expansion planned  
 - README baseline created  
-- Implementation starting  
+- Terraform networking deployed  
+- Application layer implementation starting  
 
 ---
 
