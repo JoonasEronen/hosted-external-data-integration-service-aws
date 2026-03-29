@@ -36,10 +36,22 @@ variable "public_subnet_a_cidr" {
   default     = "10.0.1.0/24"
 }
 
+variable "public_subnet_b_cidr" {
+  description = "CIDR block for public subnet B (ALB subnet)."
+  type        = string
+  default     = "10.0.4.0/24"
+}
+
 variable "private_app_subnet_a_cidr" {
   description = "CIDR block for private application subnet A (EC2 app tier)."
   type        = string
   default     = "10.0.2.0/24"
+}
+
+variable "private_app_subnet_b_cidr" {
+  description = "CIDR block for private application subnet B (EC2 app tier)."
+  type        = string
+  default     = "10.0.5.0/24"
 }
 
 variable "private_db_subnet_a_cidr" {
@@ -48,10 +60,22 @@ variable "private_db_subnet_a_cidr" {
   default     = "10.0.3.0/24"
 }
 
+variable "private_db_subnet_b_cidr" {
+  description = "CIDR block for private database subnet B (RDS subnet group)."
+  type        = string
+  default     = "10.0.6.0/24"
+}
+
 variable "az_a" {
-  description = "Primary Availability Zone for the MVP deployment."
+  description = "Availability Zone A for multi-AZ resources."
   type        = string
   default     = "eu-north-1a"
+}
+
+variable "az_b" {
+  description = "Availability Zone B for multi-AZ resources."
+  type        = string
+  default     = "eu-north-1b"
 }
 
 # =====================

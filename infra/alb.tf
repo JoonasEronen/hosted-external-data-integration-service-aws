@@ -1,11 +1,11 @@
-# Application Load Balancer in public subnet
+# Application Load Balancer across two public subnets
 resource "aws_lb" "app_alb" {
   name               = "external-data-integration-alb"
   internal           = false
   load_balancer_type = "application"
 
   security_groups = [aws_security_group.alb_sg.id]
-  subnets         = [aws_subnet.public_subnet_a.id]
+  subnets         = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
 
   tags = {
     Name = "external-data-integration-alb"
