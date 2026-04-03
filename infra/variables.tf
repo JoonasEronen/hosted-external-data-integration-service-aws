@@ -2,13 +2,13 @@
 # Project metadata
 # =====================
 
-variable "project" {
+variable "project_name" {
   description = "Project name used in tags and resource naming."
   type        = string
   default     = "hosted-external-data-integration-service"
 }
 
-variable "env" {
+variable "environment" {
   description = "Environment name used in tags and naming (dev/stage/prod)."
   type        = string
   default     = "dev"
@@ -98,16 +98,28 @@ variable "app_port" {
 # Database
 # =====================
 
+variable "db_identifier" {
+  description = "RDS instance identifier"
+  type        = string
+  default     = "p2-postgres"
+}
+
 variable "db_name" {
   description = "Name of the PostgreSQL application database."
   type        = string
-  default     = "integrationdb"
+  default     = "appdb"
 }
 
 variable "db_username" {
   description = "Master username for the PostgreSQL database."
   type        = string
   default     = "appuser"
+}
+
+variable "db_password" {
+  description = "Database password (from GitHub secrets)"
+  type        = string
+  sensitive   = true
 }
 
 variable "db_instance_class" {
