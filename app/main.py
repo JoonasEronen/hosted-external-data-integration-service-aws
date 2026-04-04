@@ -3,12 +3,20 @@ from fastapi.templating import Jinja2Templates
 from apscheduler.schedulers.background import BackgroundScheduler
 import httpx
 import datetime
+from contextlib import asynccontextmanager
+from app.database.connection import create_tables
+from app.database.repository import save_ingestion_run, get_latest_ingestion_runs
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_tables()
+    print("Database tables created")
+    yield
+
+app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="app/templates")
 
-# Temporary in-memory storage for local development before moving to PostgreSQL
-ingestion_runs = []
 
 # Weather code mappings based on Open-Meteo / WMO weather interpretation codes
 WEATHER_EMOJI = {
@@ -78,7 +86,7 @@ def wind_arrow(deg):
 
 
 def run_ingestion_job():
-    """Fetch current weather data for multiple cities and store the latest runs in memory."""
+    """Fetch current weather data for multiple cities and persist ingestion metadata."""
     now = datetime.datetime.now(datetime.timezone.utc)
 
     cities = [
@@ -122,25 +130,26 @@ def run_ingestion_job():
             )
 
         run = {
-            "timestamp": now.isoformat(),
-            "status": "success",
             "source_name": "Open-Meteo API",
-            "records_saved": len(city_results),
-            "city_results": city_results,
-        }
+            "status": "success",
+            "started_at": now,
+            "finished_at": datetime.datetime.now(datetime.timezone.utc),
+            "records_fetched": len(city_results),
+            "error_message": None,
+            }
 
     except Exception as e:
         run = {
-            "timestamp": now.isoformat(),
-            "status": "failed",
             "source_name": "Open-Meteo API",
-            "records_saved": 0,
-            "city_results": [],
-            "error": str(e),
-        }
+            "status": "failed",
+            "started_at": now,
+            "finished_at": datetime.datetime.now(datetime.timezone.utc),
+            "records_fetched": 0,
+            "error_message": str(e),
+            }
 
-    ingestion_runs.insert(0, run)
-    del ingestion_runs[10:]
+    # Persist ingestion run to PostgreSQL
+    save_ingestion_run(run)
 
 
 # Local development scheduler for simulating periodic ingestion
@@ -161,6 +170,7 @@ def health():
 
 @app.get("/dashboard")
 def dashboard(request: Request):
+    ingestion_runs = get_latest_ingestion_runs(limit=10)
     latest_run = ingestion_runs[0] if ingestion_runs else None
 
     return templates.TemplateResponse(
