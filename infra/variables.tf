@@ -116,12 +116,6 @@ variable "db_username" {
   default     = "appuser"
 }
 
-variable "db_password" {
-  description = "Database password (from GitHub secrets)"
-  type        = string
-  sensitive   = true
-}
-
 variable "db_instance_class" {
   description = "RDS instance class for PostgreSQL."
   type        = string

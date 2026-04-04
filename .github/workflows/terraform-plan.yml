@@ -19,9 +19,7 @@ jobs:
       pull-requests: write
       id-token: write
 
-    env:
-      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-
+ 
     defaults:
       run:
         working-directory: infra

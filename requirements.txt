@@ -5,3 +5,4 @@ apscheduler
 httpx
 sqlalchemy
 psycopg2-binary
+boto3

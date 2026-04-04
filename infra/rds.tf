@@ -43,9 +43,9 @@ resource "aws_db_instance" "postgres" {
   storage_type      = "gp3"
 
   # Initial database
-  db_name  = var.db_name
-  username = var.db_username
-  password = var.db_password
+  db_name                     = var.db_name
+  username                    = var.db_username
+  manage_master_user_password = true
 
   # Networking
   db_subnet_group_name   = aws_db_subnet_group.rds.name
