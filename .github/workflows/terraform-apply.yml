@@ -1,25 +1,22 @@
 name: Terraform Apply
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "infra/**"
-      - ".github/workflows/**"
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
+concurrency:
+  group: terraform-apply-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   apply:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: dev
     permissions:
       contents: read
       id-token: write
-
 
     defaults:
       run:
