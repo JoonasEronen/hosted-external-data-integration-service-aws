@@ -1,5 +1,11 @@
 name: Terraform Plan
 
+############################################
+# Trigger
+############################################
+# Run Terraform plan for pull requests that modify:
+# - infrastructure code
+# - workflow files
 on:
   pull_request:
     paths:
@@ -12,47 +18,81 @@ permissions:
 
 jobs:
   plan:
+    ############################################
+    # Repository safety check
+    ############################################
+    # Only run plan when the PR branch belongs to the same repository.
+    # This avoids credential issues and unsafe execution from forks.
     if: github.event.pull_request.head.repo.full_name == github.repository
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       pull-requests: write
       id-token: write
 
- 
     defaults:
       run:
         working-directory: infra
 
     steps:
+      ############################################
+      # Checkout repository
+      ############################################
       - name: Checkout
         uses: actions/checkout@v4
 
+      ############################################
+      # Setup Terraform CLI
+      ############################################
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.14.5"
 
+      ############################################
+      # Configure AWS credentials with OIDC
+      ############################################
+      # Uses short-lived credentials instead of
+      # long-lived static AWS access keys.
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: eu-north-1
 
+      ############################################
+      # Terraform formatting check
+      ############################################
       - name: Terraform fmt
         run: terraform fmt -check -recursive
 
+      ############################################
+      # Initialize Terraform working directory
+      ############################################
       - name: Terraform init
         run: terraform init -input=false -reconfigure
 
+      ############################################
+      # Validate Terraform configuration
+      ############################################
       - name: Terraform validate
         run: terraform validate
 
+      ############################################
+      # Create Terraform plan
+      ############################################
+      # Continue even if plan fails so the result
+      # can still be commented back to the PR.
       - name: Terraform plan
         id: plan
         run: terraform plan -no-color -input=false
         continue-on-error: true
 
+      ############################################
+      # Comment plan result to pull request
+      ############################################
       - name: Comment plan result on PR
         uses: actions/github-script@v7
         with:
@@ -68,6 +108,9 @@ jobs:
               body
             });
 
+      ############################################
+      # Fail workflow if Terraform plan failed
+      ############################################
       - name: Fail if plan failed
         if: steps.plan.outcome != 'success'
         run: exit 1

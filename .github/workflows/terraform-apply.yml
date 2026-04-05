@@ -1,11 +1,22 @@
 name: Terraform Apply
 
+############################################
+# Trigger
+############################################
+# Apply is executed manually only.
+# This reduces accidental infrastructure changes
+# while the environment is still evolving.
 on:
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
+############################################
+# Concurrency
+############################################
+# Prevent overlapping Terraform apply runs
+# for the same branch/ref.
 concurrency:
   group: terraform-apply-${{ github.ref }}
   cancel-in-progress: false
@@ -13,7 +24,14 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-latest
+
+    ############################################
+    # Environment protection
+    ############################################
+    # GitHub environment can require approval
+    # before Terraform apply is executed.
     environment: dev
+
     permissions:
       contents: read
       id-token: write
@@ -23,31 +41,57 @@ jobs:
         working-directory: infra
 
     steps:
+      ############################################
+      # Checkout repository
+      ############################################
       - name: Checkout
         uses: actions/checkout@v4
 
+      ############################################
+      # Setup Terraform CLI
+      ############################################
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.14.5"
 
+      ############################################
+      # Configure AWS credentials with OIDC
+      ############################################
+      # Uses short-lived credentials instead of
+      # long-lived static AWS access keys.
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: eu-north-1
 
+      ############################################
+      # Terraform formatting check
+      ############################################
       - name: Terraform fmt
         run: terraform fmt -check -recursive
 
+      ############################################
+      # Initialize Terraform working directory
+      ############################################
       - name: Terraform init
         run: terraform init -input=false -reconfigure
 
+      ############################################
+      # Validate Terraform configuration
+      ############################################
       - name: Terraform validate
         run: terraform validate
 
+      ############################################
+      # Create execution plan
+      ############################################
       - name: Terraform plan
         run: terraform plan -input=false -out=tfplan
 
+      ############################################
+      # Apply planned infrastructure changes
+      ############################################
       - name: Terraform apply
         run: terraform apply -auto-approve -input=false tfplan
