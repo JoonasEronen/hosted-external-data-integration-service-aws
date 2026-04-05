@@ -38,7 +38,7 @@ resource "aws_instance" "app_server_a" {
   user_data = <<-EOF
               #!/bin/bash
               dnf update -y
-              dnf install -y python3
+              dnf install -y python3 python3-pip
 
               mkdir -p /opt/app
               cd /opt/app
@@ -51,6 +51,7 @@ resource "aws_instance" "app_server_a" {
               DB_NAME=${var.db_name}
               DB_USER=${var.db_username}
               DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
+              AWS_REGION=${var.aws_region}
               ENVVARS
 
               cat > index.html <<HTML

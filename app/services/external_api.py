@@ -1,0 +1,102 @@
+import datetime
+
+import httpx
+
+from app.database.repository import save_ingestion_run
+from app.domain.weather import (
+    WEATHER_EMOJI,
+    WEATHER_TEXT,
+    wind_direction_to_compass,
+    wind_arrow,
+)
+
+############################################
+# External data ingestion service
+############################################
+# Handles:
+# - external API calls
+# - response transformation
+# - ingestion run tracking
+
+
+############################################
+# Ingestion job
+############################################
+# Periodic ingestion job that:
+# - fetches weather data from an external API
+# - transforms selected response fields
+# - stores ingestion metadata to PostgreSQL
+#
+# In this MVP phase, the service stores ingestion run metadata
+# rather than persisting the full weather payload.
+def run_ingestion_job():
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # Demo locations used to simulate a recurring external data feed.
+    cities = [
+        {"name": "Helsinki", "latitude": 60.17, "longitude": 24.94},
+        {"name": "Stockholm", "latitude": 59.33, "longitude": 18.07},
+        {"name": "New York", "latitude": 40.71, "longitude": -74.01},
+    ]
+
+    try:
+        city_results = []
+
+        for city in cities:
+            # Open-Meteo current weather endpoint for one city.
+            url = (
+                "https://api.open-meteo.com/v1/forecast"
+                f"?latitude={city['latitude']}"
+                f"&longitude={city['longitude']}"
+                "&current_weather=true"
+            )
+
+            # Fetch current weather from the external provider.
+            response = httpx.get(url, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            current_weather = data["current_weather"]
+
+            weather_code = current_weather["weathercode"]
+            wind_dir = current_weather["winddirection"]
+
+            # Transform raw provider fields into a more readable structure.
+            city_results.append(
+                {
+                    "city": city["name"],
+                    "temperature": current_weather["temperature"],
+                    "weathercode": weather_code,
+                    "weather_emoji": WEATHER_EMOJI.get(weather_code, "❓"),
+                    "weather_text": WEATHER_TEXT.get(weather_code, "Unknown"),
+                    "windspeed": current_weather["windspeed"],
+                    "winddirection": wind_dir,
+                    "wind_compass": wind_direction_to_compass(wind_dir),
+                    "wind_arrow": wind_arrow(wind_dir),
+                }
+            )
+
+        # Record a successful ingestion run.
+        # For now, records_fetched tracks how many city payloads were processed.
+        run = {
+            "source_name": "Open-Meteo API",
+            "status": "success",
+            "started_at": now,
+            "finished_at": datetime.datetime.now(datetime.timezone.utc),
+            "records_fetched": len(city_results),
+            "error_message": None,
+        }
+
+    except Exception as e:
+        # Record a failed ingestion run for operational visibility.
+        run = {
+            "source_name": "Open-Meteo API",
+            "status": "failed",
+            "started_at": now,
+            "finished_at": datetime.datetime.now(datetime.timezone.utc),
+            "records_fetched": 0,
+            "error_message": str(e),
+        }
+
+    # Persist ingestion run metadata to PostgreSQL.
+    save_ingestion_run(run)

@@ -1,178 +1,90 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
-from apscheduler.schedulers.background import BackgroundScheduler
-import httpx
-import datetime
-from contextlib import asynccontextmanager
+
 from app.database.connection import create_tables
-from app.database.repository import save_ingestion_run, get_latest_ingestion_runs
+from app.database.repository import get_latest_ingestion_runs
+from app.scheduler import create_scheduler
 
 
+############################################
+# Application lifecycle
+############################################
+# FastAPI lifespan hook used for:
+# - creating database tables at startup
+# - starting the background ingestion scheduler
+# - shutting down the scheduler gracefully on service stop
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Create database tables when the service starts.
+    # This is acceptable for MVP/demo purposes.
     create_tables()
     print("Database tables created")
-    yield
 
+    # Create and start the background scheduler.
+    scheduler = create_scheduler()
+    scheduler.start()
+    print("Scheduler started")
+
+    try:
+        yield
+    finally:
+        # Shut down the scheduler cleanly when the app stops.
+        scheduler.shutdown()
+        print("Scheduler stopped")
+
+
+############################################
+# FastAPI application
+############################################
+# Main application instance for the hosted integration service.
 app = FastAPI(lifespan=lifespan)
+
+
+############################################
+# Templates
+############################################
+# Jinja2 templates used for server-rendered dashboard views.
 templates = Jinja2Templates(directory="app/templates")
 
 
-# Weather code mappings based on Open-Meteo / WMO weather interpretation codes
-WEATHER_EMOJI = {
-    0: "☀️",
-    1: "🌤️",
-    2: "⛅",
-    3: "☁️",
-    45: "🌫️",
-    48: "🌫️",
-    51: "🌦️",
-    53: "🌦️",
-    55: "🌧️",
-    61: "🌧️",
-    63: "🌧️",
-    65: "⛈️",
-    71: "❄️",
-    73: "❄️",
-    75: "❄️",
-    80: "🌦️",
-    81: "🌧️",
-    82: "⛈️",
-    95: "⛈️",
-}
-
-WEATHER_TEXT = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Rime fog",
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-    56: "Light freezing drizzle",
-    57: "Dense freezing drizzle",
-    61: "Light rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-    66: "Light freezing rain",
-    67: "Heavy freezing rain",
-    71: "Light snow",
-    73: "Moderate snow",
-    75: "Heavy snow",
-    77: "Snow grains",
-    80: "Light rain showers",
-    81: "Moderate rain showers",
-    82: "Violent rain showers",
-    85: "Light snow showers",
-    86: "Heavy snow showers",
-    95: "Thunderstorm",
-    96: "Thunderstorm with hail",
-    99: "Thunderstorm with heavy hail",
-}
-
-
-def wind_direction_to_compass(deg):
-    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-    index = round(deg / 45) % 8
-    return directions[index]
-
-
-def wind_arrow(deg):
-    arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
-    index = round(deg / 45) % 8
-    return arrows[index]
-
-
-def run_ingestion_job():
-    """Fetch current weather data for multiple cities and persist ingestion metadata."""
-    now = datetime.datetime.now(datetime.timezone.utc)
-
-    cities = [
-        {"name": "Helsinki", "latitude": 60.17, "longitude": 24.94},
-        {"name": "Stockholm", "latitude": 59.33, "longitude": 18.07},
-        {"name": "New York", "latitude": 40.71, "longitude": -74.01},
-    ]
-
-    try:
-        city_results = []
-
-        for city in cities:
-            url = (
-                "https://api.open-meteo.com/v1/forecast"
-                f"?latitude={city['latitude']}"
-                f"&longitude={city['longitude']}"
-                "&current_weather=true"
-            )
-
-            response = httpx.get(url, timeout=10)
-            response.raise_for_status()
-
-            data = response.json()
-            current_weather = data["current_weather"]
-
-            weather_code = current_weather["weathercode"]
-            wind_dir = current_weather["winddirection"]
-
-            city_results.append(
-                {
-                    "city": city["name"],
-                    "temperature": current_weather["temperature"],
-                    "weathercode": weather_code,
-                    "weather_emoji": WEATHER_EMOJI.get(weather_code, "❓"),
-                    "weather_text": WEATHER_TEXT.get(weather_code, "Unknown"),
-                    "windspeed": current_weather["windspeed"],
-                    "winddirection": wind_dir,
-                    "wind_compass": wind_direction_to_compass(wind_dir),
-                    "wind_arrow": wind_arrow(wind_dir),
-                }
-            )
-
-        run = {
-            "source_name": "Open-Meteo API",
-            "status": "success",
-            "started_at": now,
-            "finished_at": datetime.datetime.now(datetime.timezone.utc),
-            "records_fetched": len(city_results),
-            "error_message": None,
-            }
-
-    except Exception as e:
-        run = {
-            "source_name": "Open-Meteo API",
-            "status": "failed",
-            "started_at": now,
-            "finished_at": datetime.datetime.now(datetime.timezone.utc),
-            "records_fetched": 0,
-            "error_message": str(e),
-            }
-
-    # Persist ingestion run to PostgreSQL
-    save_ingestion_run(run)
-
-
-# Local development scheduler for simulating periodic ingestion
-scheduler = BackgroundScheduler()
-scheduler.add_job(run_ingestion_job, "interval", seconds=10)
-scheduler.start()
-
-
+############################################
+# API endpoints
+############################################
+# Basic service root endpoint.
+# Useful as a simple confirmation that the app is running.
 @app.get("/")
 def root():
     return {"service": "hosted-external-data-integration-service-aws"}
 
 
+############################################
+# Health endpoint
+############################################
+# Health check endpoint used by:
+# - Application Load Balancer health checks
+# - service monitoring
+# - quick operational verification
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
+############################################
+# Dashboard endpoint
+############################################
+# Server-rendered operational dashboard showing:
+# - recent ingestion runs
+# - service status
+# - latest ingestion metadata
 @app.get("/dashboard")
 def dashboard(request: Request):
+    # Fetch latest ingestion history from PostgreSQL.
     ingestion_runs = get_latest_ingestion_runs(limit=10)
     latest_run = ingestion_runs[0] if ingestion_runs else None
 
+    # Render the dashboard template with service and ingestion data.
     return templates.TemplateResponse(
         "dashboard.html",
         {
