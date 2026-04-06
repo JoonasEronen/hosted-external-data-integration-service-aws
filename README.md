@@ -1,11 +1,22 @@
 # Hosted External Data Integration Service (AWS)
 
-### Project status: In progress  
-- MVP architecture defined and documented.  
-- Designed as a production-style hosted integration service running inside a VPC.  
-- Multi-AZ network foundation with single-instance application tier.  
-- Additional EC2 instance in a second Availability Zone planned for high-availability expansion.  
-- Focuses on realistic networking, always-on compute, and operational visibility.  
+### Project status: MVP working — production-style architecture (In progress) 
+- ALB routing to private EC2 working
+- FastAPI service deployed via artifact-based deployment
+- Scheduler running background ingestion
+- External API ingestion working
+- Data stored in RDS PostgreSQL
+- Operational dashboard available
+- Private VPC architecture with NAT egress
+- Infrastructure deployed via Terraform
+- CI/CD artifact upload via GitHub Actions
+
+Next:
+- show ingested weather data in dashboard
+- show latest weather snapshot view
+- add CloudWatch logging and alarms
+- improve dashboard visibility
+- finalize documentation
 
 ---
 
@@ -33,7 +44,7 @@ The focus is on **clean architecture, networking fundamentals, automation, and o
 1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)
 2. ALB routes traffic to a FastAPI application running on a private EC2 instance
 3. The application scheduler periodically fetches data from an external API via NAT Gateway
-4. Future iteration: application stores historical data in Amazon RDS PostgreSQL
+4. Application stores historical data in Amazon RDS PostgreSQL
 5. Amazon CloudWatch provides logging and operational visibility
 6. Future iteration: CloudWatch alarms detect failures or unhealthy conditions
 
@@ -201,8 +212,6 @@ Current MVP infrastructure:
 - Security groups  
 
 Planned next:
-- RDS PostgreSQL
-- Background ingestion scheduler
 - CloudWatch alarms
 - Multi-AZ application tier
 
@@ -328,13 +337,20 @@ Improved resilience and scaling
 
 ## Current State
 
-- Architecture defined  
-- Multi-AZ network MVP design complete  
-- Single-instance application tier  
-- Multi-AZ expansion planned  
-- README baseline created  
-- Terraform networking deployed  
-- Application layer implementation starting  
+- Private VPC architecture deployed
+- ALB -> private EC2 routing working
+- FastAPI service running on EC2
+- Background scheduler ingestion running
+- External API data ingestion working
+- Data stored in RDS PostgreSQL
+- Operational dashboard available
+- Artifact-based deployment via S3
+- Terraform infrastructure reproducible
+
+Next:
+- show ingested data in dashboard
+- dashboard polish
+- documentation improvements
 
 ---
 
@@ -342,4 +358,4 @@ Improved resilience and scaling
 
 This project represents a **production-style hosted external data integration service** built inside an AWS VPC with controlled networking, persistent storage, and operational monitoring.
 
-Next step: Implement FastAPI service and connect RDS storage
+Next step: Improve dashboard data visibility and add monitoring
