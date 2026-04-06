@@ -97,3 +97,15 @@ resource "aws_iam_role_policy" "ec2_s3_artifact_read" {
     ]
   })
 }
+
+############################################
+# EC2 SSM Session Manager access
+############################################
+# Allow EC2 instance to register with AWS Systems Manager
+# so the instance can be accessed through Session Manager
+# without a public IP or SSH.
+
+resource "aws_iam_role_policy_attachment" "ec2_ssm_managed_instance_core" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
