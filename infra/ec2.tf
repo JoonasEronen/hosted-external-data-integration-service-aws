@@ -23,8 +23,9 @@ data "aws_ami" "amazon_linux_2023" {
 # EC2 Application Instance
 ############################################
 # Application-tier EC2 instance running in the private app subnet.
-# IAM instance profile is attached so the application can later
-# read the database secret from AWS Secrets Manager at runtime.
+# IAM instance profile is attached so the application can:
+# - read deployment artifacts from S3
+# - read database secret from AWS Secrets Manager at runtime
 
 resource "aws_instance" "app_server_a" {
   ami                         = data.aws_ami.amazon_linux_2023.id
@@ -37,34 +38,61 @@ resource "aws_instance" "app_server_a" {
 
   user_data = <<-EOF
               #!/bin/bash
-              dnf update -y
-              dnf install -y python3
+              set -e
 
+              ############################################
+              # Install runtime dependencies
+              ############################################
+              dnf update -y
+              dnf install -y python3 python3-pip unzip awscli
+
+              ############################################
+              # Prepare application directory
+              ############################################
               mkdir -p /opt/app
               cd /opt/app
 
-              # Runtime environment placeholder file for the future application service.
+              ############################################
+              # Download deployment artifact from S3
+              ############################################
+              aws s3 cp s3://${aws_s3_bucket.app_artifacts.bucket}/app/latest.zip /opt/app/latest.zip
+
+              ############################################
+              # Extract application artifact
+              ############################################
+              unzip -o /opt/app/latest.zip -d /opt/app
+
+              ############################################
+              # Install Python dependencies
+              ############################################
+              pip3 install -r /opt/app/requirements.txt
+
+              ############################################
+              # Write runtime environment configuration
+              ############################################
               # Password is NOT stored here.
+              # The application fetches the DB password
+              # from AWS Secrets Manager at runtime.
               cat > /opt/app/app.env <<ENVVARS
               DB_HOST=${aws_db_instance.postgres.address}
               DB_PORT=5432
               DB_NAME=${var.db_name}
               DB_USER=${var.db_username}
               DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
+              AWS_REGION=${var.aws_region}
               ENVVARS
 
-              cat > index.html <<HTML
-              <html>
-                <head><title>External Data Integration Service</title></head>
-                <body>
-                  <h1>External Data Integration Service</h1>
-                  <p>EC2 application instance is running.</p>
-                  <p>Database runtime configuration file created.</p>
-                </body>
-              </html>
-              HTML
+              ############################################
+              # Export runtime environment variables
+              ############################################
+              set -a
+              source /opt/app/app.env
+              set +a
 
-              nohup python3 -m http.server ${var.app_port} --directory /opt/app > /var/log/app-server.log 2>&1 &
+              ############################################
+              # Start FastAPI application
+              ############################################
+              nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${var.app_port} > /var/log/app.log 2>&1 &
               EOF
 
   tags = {

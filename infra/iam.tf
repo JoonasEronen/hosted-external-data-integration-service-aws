@@ -66,3 +66,34 @@ resource "aws_iam_role_policy" "ec2_secrets_access" {
     ]
   })
 }
+
+############################################
+# EC2 S3 artifact read access
+############################################
+# Allow the EC2 application instance to download
+# deployment artifacts from the S3 artifact bucket.
+
+resource "aws_iam_role_policy" "ec2_s3_artifact_read" {
+  name = "${var.project_name}-ec2-s3-artifact-read"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.app_artifacts.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.app_artifacts.arn
+      }
+    ]
+  })
+}

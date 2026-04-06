@@ -1,0 +1,73 @@
+name: App Artifact Upload
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "app/**"
+      - "requirements.txt"
+      - ".github/workflows/app-artifact.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload-artifact:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      ARTIFACT_BUCKET: joonaseronen-external-data-integration-artifacts-eu-north-1
+      ARTIFACT_KEY: app/latest.zip
+      AWS_REGION: eu-north-1
+
+    steps:
+      ############################################
+      # Checkout repository
+      ############################################
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      ############################################
+      # Configure AWS credentials using OIDC
+      ############################################
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      ############################################
+      # Build application artifact
+      ############################################
+      # Package the FastAPI application and requirements
+      # into a single deployable zip file.
+      - name: Create application artifact
+        run: |
+          mkdir -p build
+          cp -r app build/app
+          cp requirements.txt build/requirements.txt
+
+          cd build
+          zip -r latest.zip app requirements.txt
+
+      ############################################
+      # Upload artifact to S3
+      ############################################
+      - name: Upload artifact to S3
+        run: |
+          aws s3 cp build/latest.zip s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}
+
+      ############################################
+      # Confirm uploaded artifact location
+      ############################################
+      - name: Show artifact location
+        run: |
+          echo "Uploaded artifact to s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}"
