@@ -23,9 +23,9 @@ data "aws_ami" "amazon_linux_2023" {
 # EC2 Application Instance
 ############################################
 # Application-tier EC2 instance running in the private app subnet.
-# IAM instance profile is attached so the application can:
-# - read deployment artifacts from S3
-# - read database secret from AWS Secrets Manager at runtime
+# IAM instance profile is attached so the application can read:
+# - deployment artifacts from S3
+# - database secret from AWS Secrets Manager at runtime
 
 resource "aws_instance" "app_server_a" {
   ami                         = data.aws_ami.amazon_linux_2023.id
