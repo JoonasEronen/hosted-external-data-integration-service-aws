@@ -35,70 +35,46 @@
         border: 1px solid #ddd;
         padding: 10px;
         text-align: left;
+        vertical-align: top;
       }
 
       th {
         background: #f5f5f5;
       }
+
       .error {
-          color: #b00020;      
-          font-weight: bold;
+        color: #b00020;
+        font-weight: bold;
       }
-      
     </style>
   </head>
   <body>
     <h1>{{ title }}</h1>
 
-    <!-- Service overview -->
     <div class="card">
       <p><strong>Service status:</strong> {{ status }}</p>
       <p><strong>Data source:</strong> {{ source_name }}</p>
-      <p><strong>Total ingestion runs:</strong> {{ run_count }}</p>
+      <p><strong>Recent ingestion runs shown:</strong> {{ run_count }}</p>
     </div>
 
-    <!-- Latest ingestion run -->
     <div class="card">
       <h2>Latest ingestion run</h2>
 
       {% if latest_run %}
-        <p><strong>Last update:</strong> {{ latest_run.timestamp }}</p>
+        <p><strong>Started at:</strong> {{ latest_run.started_at }}</p>
+        <p><strong>Finished at:</strong> {{ latest_run.finished_at or "In progress / not recorded" }}</p>
         <p><strong>Status:</strong> {{ latest_run.status }}</p>
-        <p><strong>Records saved:</strong> {{ latest_run.records_saved }}</p>
-             
-        {% if latest_run.status == "failed" %}
-          <p class="error"><strong>Error:</strong> {{ latest_run.error }}</p>
-        {% endif %}
+        <p><strong>Source:</strong> {{ latest_run.source_name }}</p>
+        <p><strong>Records fetched:</strong> {{ latest_run.records_fetched if latest_run.records_fetched is not none else "N/A" }}</p>
 
-      {% if latest_run.city_results %}
-      <h3>Latest weather snapshot</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>City</th>
-            <th>Temperature (°C)</th>
-            <th>Weather</th>
-            <th>Wind</th>           
-          </tr>
-        </thead>
-        <tbody>
-          {% for city in latest_run.city_results %}
-            <tr>
-              <td>{{ city.city }}</td>
-              <td>{{ city.temperature }}</td>
-              <td>{{ city.weather_emoji }} {{ city.weather_text }}</td>
-              <td>{{ city.windspeed }} km/h {{ city.wind_arrow }} {{ city.wind_compass }}</td>          
-            </tr>
-          {% endfor %}
-        </tbody>  
-      </table>
-      {% endif %}
+        {% if latest_run.error_message %}
+          <p class="error"><strong>Error:</strong> {{ latest_run.error_message }}</p>
+        {% endif %}
       {% else %}
         <p class="muted">No ingestion runs yet.</p>
       {% endif %}
     </div>
 
-    <!-- Recent ingestion history -->
     <div class="card">
       <h2>Recent ingestion history</h2>
 
@@ -106,19 +82,23 @@
         <table>
           <thead>
             <tr>
-              <th>Timestamp</th>
+              <th>Started At</th>
+              <th>Finished At</th>
               <th>Status</th>
               <th>Source</th>
-              <th>Records Saved</th>
+              <th>Records Fetched</th>
+              <th>Error</th>
             </tr>
           </thead>
           <tbody>
             {% for run in ingestion_runs %}
               <tr>
-                <td>{{ run.timestamp }}</td>
+                <td>{{ run.started_at }}</td>
+                <td>{{ run.finished_at or "N/A" }}</td>
                 <td>{{ run.status }}</td>
                 <td>{{ run.source_name }}</td>
-                <td>{{ run.records_saved }}</td>
+                <td>{{ run.records_fetched if run.records_fetched is not none else "N/A" }}</td>
+                <td>{{ run.error_message or "-" }}</td>
               </tr>
             {% endfor %}
           </tbody>
