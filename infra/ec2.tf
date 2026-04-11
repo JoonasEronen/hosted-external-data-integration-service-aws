@@ -37,63 +37,115 @@ resource "aws_instance" "app_server_a" {
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
   user_data = <<-EOF
-              #!/bin/bash
-              set -e
+            #!/bin/bash
+            set -e
 
-              ############################################
-              # Install runtime dependencies
-              ############################################
-              dnf update -y
-              dnf install -y python3 python3-pip unzip awscli
+            ############################################
+            # Install runtime dependencies
+            ############################################
+            dnf update -y
+            dnf install -y python3 python3-pip unzip awscli
 
-              ############################################
-              # Prepare application directory
-              ############################################
-              mkdir -p /opt/app
-              cd /opt/app
+            ############################################
+            # Prepare application directory
+            ############################################
+            mkdir -p /opt/app
+            cd /opt/app
+                         
+            ############################################
+            # Write runtime environment configuration
+            ############################################
+            # Password is NOT stored here.
+            # The application fetches the DB password
+            # from AWS Secrets Manager at runtime.
+            cat > /opt/app/app.env <<ENVVARS
+            DB_HOST=${aws_db_instance.postgres.address}
+            DB_PORT=5432
+            DB_NAME=${var.db_name}
+            DB_USER=${var.db_username}
+            DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
+            AWS_REGION=${var.aws_region}
+ENVVARS
 
-              ############################################
-              # Download deployment artifact from S3
-              ############################################
-              aws s3 cp s3://${aws_s3_bucket.app_artifacts.bucket}/app/latest.zip /opt/app/latest.zip
+            ############################################
+            # Create Python virtual environment
+            ############################################
+            if [ ! -d /opt/app/.venv ]; then
+              python3 -m venv /opt/app/.venv
+            fi
+            /opt/app/.venv/bin/pip install --upgrade pip       
 
-              ############################################
-              # Extract application artifact
-              ############################################
-              unzip -o /opt/app/latest.zip -d /opt/app
 
-              ############################################
-              # Install Python dependencies
-              ############################################
-              pip3 install -r /opt/app/requirements.txt
+            ############################################
+            # Create systemd service
+            ############################################
+            cat > /etc/systemd/system/p2-app.service <<SERVICE
+            [Unit]
+            Description=P2 FastAPI Service
+            After=network.target
 
-              ############################################
-              # Write runtime environment configuration
-              ############################################
-              # Password is NOT stored here.
-              # The application fetches the DB password
-              # from AWS Secrets Manager at runtime.
-              cat > /opt/app/app.env <<ENVVARS
-              DB_HOST=${aws_db_instance.postgres.address}
-              DB_PORT=5432
-              DB_NAME=${var.db_name}
-              DB_USER=${var.db_username}
-              DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
-              AWS_REGION=${var.aws_region}
-              ENVVARS
+            [Service]
+            User=ec2-user
+            Group=ec2-user
 
-              ############################################
-              # Export runtime environment variables
-              ############################################
-              set -a
-              source /opt/app/app.env
-              set +a
+            WorkingDirectory=/opt/app
 
-              ############################################
-              # Start FastAPI application
-              ############################################
-              nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${var.app_port} > /var/log/app.log 2>&1 &
-              EOF
+            EnvironmentFile=/opt/app/app.env
+            ExecStartPre=/bin/sleep 5
+            Environment="PATH=/opt/app/.venv/bin"
+
+            ExecStart=/opt/app/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port ${var.app_port}
+
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+SERVICE
+
+            ############################################
+            # Enable service
+            ############################################
+            systemctl daemon-reload
+            systemctl enable p2-app     
+
+            ############################################
+            # Create deploy script
+            ############################################
+            cat > /opt/app/deploy_app.sh <<DEPLOY
+            #!/bin/bash
+            set -e
+
+            echo "[deploy] downloading artifact from S3"
+            aws s3 cp s3://${aws_s3_bucket.app_artifacts.bucket}/app/latest.zip /opt/app/latest.zip
+
+            echo "[deploy] extracting artifact"
+            unzip -o /opt/app/latest.zip -d /opt/app
+
+            echo "[deploy] installing Python dependencies"
+            /opt/app/.venv/bin/pip install --upgrade pip
+            /opt/app/.venv/bin/pip install -r /opt/app/requirements.txt
+
+            echo "[deploy] restarting service"
+            systemctl restart p2-app
+
+            echo "[deploy] waiting for app startup"
+            sleep 5
+
+            echo "[deploy] health check"
+            curl -f http://localhost:${var.app_port}/health
+DEPLOY
+
+            chmod +x /opt/app/deploy_app.sh
+
+            ############################################
+            # Run initial deployment
+            ############################################
+            /opt/app/deploy_app.sh
+
+EOF
+
+
 
   tags = {
     Name        = "app-server-a"

@@ -102,6 +102,6 @@ def dashboard(request: Request):
             "latest_run": latest_run,
             "run_count": len(ingestion_runs),
             "ingestion_runs": ingestion_runs,
-            "city_results": latest_run.city_results
+            "city_results": latest_run.city_results if latest_run else []
         },
     )
