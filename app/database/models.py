@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, DateTime
+from sqlalchemy import Integer, String, DateTime, JSON
 
 
 ############################################
@@ -94,3 +94,16 @@ class IngestionRun(Base):
         String(500),
         nullable=True
     )
+
+    ############################################
+    # City-level results
+    ############################################
+    # JSON string storing city-level weather data
+    # for the latest ingestion run.
+    # This is a simple way to store structured data
+    # without needing a separate table or complex schema.
+    city_results: Mapped[list] = mapped_column(
+        JSON,
+        nullable=True
+    )
+

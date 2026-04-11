@@ -10,6 +10,8 @@ from app.domain.weather import (
     wind_arrow,
 )
 
+from zoneinfo import ZoneInfo
+
 ############################################
 # External data ingestion service
 ############################################
@@ -28,7 +30,8 @@ from app.domain.weather import (
 # - stores ingestion metadata to PostgreSQL
 #
 # In this MVP phase, the service stores ingestion run metadata
-# rather than persisting the full weather payload.
+# together with a lightweight city-level weather snapshot.
+# It does not persist the full raw API response.
 def run_ingestion_job():
     now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -61,10 +64,17 @@ def run_ingestion_job():
             weather_code = current_weather["weathercode"]
             wind_dir = current_weather["winddirection"]
 
+            local_tz = ZoneInfo("Europe/Helsinki")
+            observed_local = datetime.datetime.fromisoformat(current_weather["time"]).replace(tzinfo=datetime.timezone.utc).astimezone(local_tz).strftime("%H:%M %Z")
+
+
+
             # Transform raw provider fields into a more readable structure.
             city_results.append(
                 {
                     "city": city["name"],
+                    "observed_at": current_weather["time"],
+                    "observed_local": observed_local,
                     "temperature": current_weather["temperature"],
                     "weathercode": weather_code,
                     "weather_emoji": WEATHER_EMOJI.get(weather_code, "❓"),
@@ -76,8 +86,7 @@ def run_ingestion_job():
                 }
             )
 
-        # Record a successful ingestion run.
-        # For now, records_fetched tracks how many city payloads were processed.
+        # Record a successful ingestion run.        
         run = {
             "source_name": "Open-Meteo API",
             "status": "success",
@@ -85,6 +94,7 @@ def run_ingestion_job():
             "finished_at": datetime.datetime.now(datetime.timezone.utc),
             "records_fetched": len(city_results),
             "error_message": None,
+            "city_results": city_results,
         }
 
     except Exception as e:
@@ -96,6 +106,7 @@ def run_ingestion_job():
             "finished_at": datetime.datetime.now(datetime.timezone.utc),
             "records_fetched": 0,
             "error_message": str(e),
+            "city_results": [],
         }
 
     # Persist ingestion run metadata to PostgreSQL.

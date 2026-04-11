@@ -83,6 +83,7 @@ def dashboard(request: Request):
     # Fetch latest ingestion history from PostgreSQL.
     ingestion_runs = get_latest_ingestion_runs(limit=10)
     latest_run = ingestion_runs[0] if ingestion_runs else None
+   
 
     # Render the dashboard template with service and ingestion data.
     return templates.TemplateResponse(
@@ -90,10 +91,17 @@ def dashboard(request: Request):
         {
             "request": request,
             "title": "Hosted External Data Integration Service",
+            "description": (
+                "This dashboard shows recent ingestion runs from the hosted "
+                "external data integration service. The service periodically "
+                "fetches weather data from an external API and tracks ingestion "
+                "metadata in PostgreSQL."
+            ),
             "status": "Running",
             "source_name": "Open-Meteo API",
             "latest_run": latest_run,
             "run_count": len(ingestion_runs),
             "ingestion_runs": ingestion_runs,
+            "city_results": latest_run.city_results
         },
     )

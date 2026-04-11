@@ -1,6 +1,7 @@
 # Hosted External Data Integration Service (AWS)
 
-### Project status: MVP working — production-style architecture (In progress) 
+### Project status: MVP working — production-style architecture (In progress)
+
 - ALB routing to private EC2 working
 - FastAPI service deployed via artifact-based deployment
 - Scheduler running background ingestion
