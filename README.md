@@ -1,23 +1,22 @@
 # Hosted External Data Integration Service (AWS)
 
-### Project status: MVP working — production-style architecture (In progress)
+### Status: MVP working — production-style architecture (in progress)
 
 - ALB routing to private EC2 working
 - FastAPI service deployed via artifact-based deployment
 - Scheduler running background ingestion
 - External API ingestion working
 - Data stored in RDS PostgreSQL
-- Operational dashboard available
+- Operational dashboard implemented
 - Private VPC architecture with NAT egress
 - Infrastructure deployed via Terraform
 - CI/CD artifact upload via GitHub Actions
 
-Next:
-- show ingested weather data in dashboard
-- show latest weather snapshot view
-- add CloudWatch logging and alarms
-- improve dashboard visibility
-- finalize documentation
+### Next Iterations
+
+- Add production-level monitoring (CloudWatch logs and alarms)  
+- Expand architecture to multi-AZ high availability  
+- Finalize documentation  
 
 ---
 
@@ -33,6 +32,21 @@ This project demonstrates a realistic cloud service pattern commonly used for:
 - Internal dashboards and reporting services  
 
 The focus is on **clean architecture, networking fundamentals, automation, and observability**, not on building a full product.
+
+---
+
+## Dashboard Overview
+
+![Dashboard Overview](docs/images/dashboard-overview-hosted-external-data-integration-service.png)
+
+Production-style operational dashboard providing real-time visibility into:
+
+- Service status and latest ingestion result  
+- Background ingestion activity  
+- Latest external data snapshot  
+- Historical ingestion runs  
+
+Designed to simulate internal tooling used for monitoring continuously running cloud services.
 
 ---
 
@@ -126,7 +140,7 @@ This project models a **hosted external data integration service** that solves t
 ## Cost and Scaling Model
 
 - Always-on EC2 compute (chosen instead of serverless to model continuously running integration services)  
-- Predictable baseline cost 
+- Predictable baseline cost  
 - Suitable for continuous ingestion services  
 - Scales vertically or via multi-AZ expansion  
 - Can later add Auto Scaling  
@@ -265,11 +279,11 @@ Initial infrastructure MVP validated after Terraform deployment.
 
 Target group health:
 
-![Target healthy](docs/screenshots/mvp-target-group-healthy.png)
+![Target healthy](docs/proof/mvp-target-group-healthy.png)
 
 HTTP response through ALB:
 
-![HTTP 200](docs/screenshots/mvp-http-200.png)
+![HTTP 200](docs/proof/mvp-http-200.png)
 
 ---
 
@@ -332,31 +346,16 @@ Iteration 2:
 Application layer + database integration
 
 Iteration 3:
-Improved resilience and scaling
+Add production-level monitoring (CloudWatch logs and alarms)
+
+Iteration 4:
+Expand to multi-AZ high availability
+
+Iteration 5:
+Finalize documentation
 
 ---
 
-## Current State
-
-- Private VPC architecture deployed
-- ALB -> private EC2 routing working
-- FastAPI service running on EC2
-- Background scheduler ingestion running
-- External API data ingestion working
-- Data stored in RDS PostgreSQL
-- Operational dashboard available
-- Artifact-based deployment via S3
-- Terraform infrastructure reproducible
-
-Next:
-- show ingested data in dashboard
-- dashboard polish
-- documentation improvements
-
----
-
-## Status
+## Project Summary
 
 This project represents a **production-style hosted external data integration service** built inside an AWS VPC with controlled networking, persistent storage, and operational monitoring.
-
-Next step: Improve dashboard data visibility and add monitoring
