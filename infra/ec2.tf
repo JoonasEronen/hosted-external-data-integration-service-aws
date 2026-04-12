@@ -36,7 +36,7 @@ resource "aws_instance" "app_server_a" {
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
-user_data = <<-EOF
+  user_data = <<-EOF
 #!/bin/bash
 set -e
 
@@ -147,11 +147,11 @@ EOF
 
 
 
-tags = {
-Name        = "app-server-a"
-Environment = var.environment
-ManagedBy   = "terraform"
-}
+  tags = {
+    Name        = "app-server-a"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
 }
 
 ############################################
