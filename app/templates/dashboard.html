@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>{{ title }}</title>
 
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       margin: 40px;
       max-width: 900px;
+      background: #f7f9fb;
+      color: #111;
     }
 
     h1,
@@ -16,13 +19,24 @@
       margin-bottom: 12px;
     }
 
+    p {
+      line-height: 1.5;
+    }
+
     /* Shared card styling */
     .card {
       border: 1px solid #ddd;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 16px;
       margin-bottom: 20px;
       background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
     }
 
     /* KPI row */
@@ -53,8 +67,59 @@
     }
 
     .metric-value {
-      font-size: 28px;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    /* Status text styles */
+    .status-success {
+      color: #2e7d32;
       font-weight: bold;
+    }
+
+    .status-failed {
+      color: #b00020;
+      font-weight: bold;
+    }
+
+    .status-running {
+      color: #1565c0;
+      font-weight: bold;
+    }
+
+    .status-unknown {
+      color: #666;
+      font-weight: bold;
+    }
+
+    /* Status badge */
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .status-badge.status-success {
+      background: #e6f4ea;
+      color: #2e7d32;
+    }
+
+    .status-badge.status-failed {
+      background: #fdecea;
+      color: #b00020;
+    }
+
+    .status-badge.status-running {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .status-badge.status-unknown {
+      background: #f1f3f4;
+      color: #666;
     }
 
     /* Weather snapshot */
@@ -67,13 +132,25 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 12px;
+      background: #fff;
     }
 
     .weather-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       margin-bottom: 8px;
+    }
+
+    .weather-middle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .city-name {
@@ -84,19 +161,14 @@
     .city-temp {
       font-weight: bold;
       font-size: 18px;
+      white-space: nowrap;
     }
 
     .weather-meta {
       color: #444;
       display: grid;
       gap: 4px;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-      }
+      font-size: 14px;
     }
 
     /* Utility */
@@ -114,6 +186,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 12px;
+      background: white;
     }
 
     th,
@@ -127,11 +200,25 @@
     th {
       background: #f5f5f5;
     }
+
+    tbody tr:hover {
+      background: #fafafa;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body {
+        margin: 20px;
+      }
+
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 
 <body>
-
   <h1>{{ title }}</h1>
 
   <!-- Dashboard description -->
@@ -143,12 +230,13 @@
   <div class="card-row">
     <div class="card metric-card">
       <div class="metric-label">Service status</div>
-      <div class="metric-value">{{ status }}</div>
+      <div class="metric-value status-running">{{ status }}</div>
     </div>
 
     <div class="card metric-card">
-      <div class="metric-label">Last Run</div>
-      <div class="metric-value">
+      <div class="metric-label">Last run</div>
+      <div
+        class="metric-value {% if latest_run and latest_run.status == 'success' %}status-success{% elif latest_run and latest_run.status == 'failed' %}status-failed{% else %}status-unknown{% endif %}">
         {{ latest_run.status if latest_run else "N/A" }}
       </div>
     </div>
@@ -159,37 +247,35 @@
         {{ latest_run.records_fetched if latest_run and latest_run.records_fetched is not none else "N/A" }}
       </div>
     </div>
-
-    <div class="card metric-card">
-      <div class="metric-label">Data source</div>
-      <div class="metric-value">{{ source_name }}</div>
-    </div>
   </div>
 
   <!-- Main dashboard layout -->
   <div class="main-grid">
-
     <!-- Operational monitoring -->
     <div class="card">
       <h2>Operational Monitoring</h2>
 
       {% if latest_run %}
-        <p><strong>Status:</strong> {{ latest_run.status }}</p>
-        <p><strong>Started at:</strong> {{ latest_run.started_at }} UTC</p>
-        <p><strong>Source:</strong> {{ latest_run.source_name }}</p>
-        <p>
-          <strong>Records fetched:</strong>
-          {{ latest_run.records_fetched if latest_run.records_fetched is not none else "N/A" }}
-        </p>
+      <p>
+        <strong>Status:</strong>
+        <span
+          class="status-badge {% if latest_run.status == 'success' %}status-success{% elif latest_run.status == 'failed' %}status-failed{% elif latest_run.status == 'running' %}status-running{% else %}status-unknown{% endif %}">
+          {{ latest_run.status }}
+        </span>
+      </p>
+      <p><strong>Started at:</strong> {{ latest_run.started_at }} UTC</p>
+      <p>
+        <strong>Records fetched:</strong>
+        {{ latest_run.records_fetched if latest_run.records_fetched is not none else "N/A" }}
+      </p>
 
-        {% if latest_run.error_message %}
-          <p class="error">
-            <strong>Error:</strong> {{ latest_run.error_message }}
-          </p>
-        {% endif %}
-
+      {% if latest_run.error_message %}
+      <p class="error">
+        <strong>Error:</strong> {{ latest_run.error_message }}
+      </p>
+      {% endif %}
       {% else %}
-        <p class="muted">No ingestion runs yet.</p>
+      <p class="muted">No ingestion runs yet.</p>
       {% endif %}
     </div>
 
@@ -198,36 +284,36 @@
       <h2>Latest Weather Snapshot</h2>
 
       {% if city_results %}
-        <div class="weather-list">
-          {% for city in city_results %}
-            <div class="weather-item">
-
-              <div class="weather-top">
-                <div class="city-name">{{ city.city }}</div>
-                <div class="city-temp">
-                  {{ city.weather_emoji }} {{ city.temperature }}°C
-                </div>
-              </div>
-
-              <div class="weather-meta">
-                <div>Observed: {{ city.observed_local }}
-                  <span class="muted">(source: {{ city.observed_at }} UTC)</span></div>
-                <div>{{ city.weather_text }}</div>
-                <div>
-                  {{ city.wind_arrow }}
-                  {{ city.wind_compass }}
-                  {{ city.windspeed }} km/h
-                </div>
-              </div>
-
+      <div class="weather-list">
+        {% for city in city_results %}
+        <div class="weather-item">
+          <div class="weather-top">
+            <div class="city-name">{{ city.city }}</div>
+            <div class="city-temp">
+              {{ city.weather_emoji }} {{ city.temperature }}°C
             </div>
-          {% endfor %}
+          </div>
+
+          <div class="weather-middle">
+            <div>{{ city.weather_text }}</div>
+            <div>
+              {{ city.wind_arrow }}
+              {{ city.wind_compass }}
+              {{ city.windspeed }} km/h
+            </div>
+          </div>
+
+          <div class="weather-meta">
+            <div>Observed: {{ city.observed_local }}</div>
+            <div class="muted">Source: {{ city.observed_at }} UTC</div>
+          </div>
         </div>
+        {% endfor %}
+      </div>
       {% else %}
-        <p class="muted">No weather snapshot available yet.</p>
+      <p class="muted">No weather snapshot available yet.</p>
       {% endif %}
     </div>
-
   </div>
 
   <!-- Ingestion history -->
@@ -235,35 +321,40 @@
     <h2>Recent ingestion history</h2>
 
     {% if ingestion_runs %}
-      <table>
-        <thead>
-          <tr>
-            <th>Started At</th>
-            <th>Finished At</th>
-            <th>Status</th>
-            <th>Source</th>
-            <th>Records Fetched</th>
-            <th>Error</th>
-          </tr>
-        </thead>
+    <table>
+      <thead>
+        <tr>
+          <th>Started At</th>
+          <th>Finished At</th>
+          <th>Status</th>
+          <th>Source</th>
+          <th>Records Fetched</th>
+          <th>Error</th>
+        </tr>
+      </thead>
 
-        <tbody>
-          {% for run in ingestion_runs %}
-            <tr>
-              <td>{{ run.started_at }}</td>
-              <td>{{ run.finished_at or "N/A" }}</td>
-              <td>{{ run.status }}</td>
-              <td>{{ run.source_name }}</td>
-              <td>{{ run.records_fetched if run.records_fetched is not none else "N/A" }}</td>
-              <td>{{ run.error_message or "-" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <tbody>
+        {% for run in ingestion_runs %}
+        <tr>
+          <td>{{ run.started_at }}</td>
+          <td>{{ run.finished_at or "N/A" }}</td>
+          <td>
+            <span
+              class="status-badge {% if run.status == 'success' %}status-success{% elif run.status == 'failed' %}status-failed{% elif run.status == 'running' %}status-running{% else %}status-unknown{% endif %}">
+              {{ run.status }}
+            </span>
+          </td>
+          <td>{{ run.source_name }}</td>
+          <td>{{ run.records_fetched if run.records_fetched is not none else "N/A" }}</td>
+          <td>{{ run.error_message or "-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
     {% else %}
-      <p class="muted">No runs recorded yet.</p>
+    <p class="muted">No runs recorded yet.</p>
     {% endif %}
   </div>
-
 </body>
+
 </html>
