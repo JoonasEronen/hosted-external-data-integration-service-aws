@@ -8,6 +8,7 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 15px;
       margin: 40px auto;
       padding: 0 20px;
       max-width: 1400px;
@@ -15,9 +16,14 @@
       color: #111;
     }
 
-    h1,
+    h1 {
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
     h2 {
       margin-bottom: 12px;
+      font-size: 20px;
     }
 
     p {
@@ -67,7 +73,7 @@
 
     .metric-label {
       color: #666;
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 8px;
     }
 
@@ -75,6 +81,21 @@
       font-size: 32px;
       font-weight: 700;
       letter-spacing: -0.5px;
+    }
+
+    .metric-block {
+      margin-bottom: 14px;
+    }
+
+    .metric-block .metric-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .metric-block div:last-child {
+      font-size: 15px;
+      font-weight: 500;
     }
 
     /* Status text styles */
@@ -261,18 +282,27 @@
       <h2>Operational Monitoring</h2>
 
       {% if latest_run %}
-      <p>
-        <strong>Status:</strong>
-        <span
-          class="status-badge {% if latest_run.status == 'success' %}status-success{% elif latest_run.status == 'failed' %}status-failed{% elif latest_run.status == 'running' %}status-running{% else %}status-unknown{% endif %}">
-          {{ latest_run.status }}
-        </span>
-      </p>
-      <p><strong>Started at:</strong> {{ latest_run.started_at }} UTC</p>
-      <p>
-        <strong>Records fetched:</strong>
-        {{ latest_run.records_fetched if latest_run.records_fetched is not none else "N/A" }}
-      </p>
+      <div class="metric-block">
+        <div class="metric-label">Status</div>
+        <div>
+          <span
+            class="status-badge {% if latest_run.status == 'success' %}status-success{% elif latest_run.status == 'failed' %}status-failed{% elif latest_run.status == 'running' %}status-running{% else %}status-unknown{% endif %}">
+            {{ latest_run.status }}
+          </span>
+        </div>
+      </div>
+
+      <div class="metric-block">
+        <div class="metric-label">Started at</div>
+        <div>{{ latest_run.started_at }} UTC</div>
+      </div>
+
+      <div class="metric-block">
+        <div class="metric-label">Records fetched</div>
+        <div>
+          {{ latest_run.records_fetched if latest_run.records_fetched is not none else "N/A" }}
+        </div>
+      </div>
 
       {% if latest_run.error_message %}
       <p class="error">
