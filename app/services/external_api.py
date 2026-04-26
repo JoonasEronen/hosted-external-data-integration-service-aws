@@ -1,4 +1,6 @@
 import datetime
+import logging
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -6,11 +8,11 @@ from app.database.repository import save_ingestion_run
 from app.domain.weather import (
     WEATHER_EMOJI,
     WEATHER_TEXT,
-    wind_direction_to_compass,
     wind_arrow,
+    wind_direction_to_compass,
 )
 
-from zoneinfo import ZoneInfo
+logger = logging.getLogger(__name__)
 
 ############################################
 # External data ingestion service
@@ -35,12 +37,16 @@ from zoneinfo import ZoneInfo
 def run_ingestion_job():
     now = datetime.datetime.now(datetime.timezone.utc)
 
+    logger.info("Data ingestion job started source=open-meteo")
+
     # Demo locations used to simulate a recurring external data feed.
     cities = [
         {"name": "Helsinki", "latitude": 60.17, "longitude": 24.94},
         {"name": "Stockholm", "latitude": 59.33, "longitude": 18.07},
         {"name": "New York", "latitude": 40.71, "longitude": -74.01},
     ]
+
+    current_city = None
 
     try:
         city_results = []
@@ -54,6 +60,9 @@ def run_ingestion_job():
                 "&current_weather=true"
             )
 
+            current_city = city["name"]
+            logger.info("Fetching external weather data city=%s", current_city)
+
             # Fetch current weather from the external provider.
             response = httpx.get(url, timeout=10)
             response.raise_for_status()
@@ -65,9 +74,12 @@ def run_ingestion_job():
             wind_dir = current_weather["winddirection"]
 
             local_tz = ZoneInfo("Europe/Helsinki")
-            observed_local = datetime.datetime.fromisoformat(current_weather["time"]).replace(tzinfo=datetime.timezone.utc).astimezone(local_tz).strftime("%H:%M %Z")
-
-
+            observed_local = (
+                datetime.datetime.fromisoformat(current_weather["time"])
+                .replace(tzinfo=datetime.timezone.utc)
+                .astimezone(local_tz)
+                .strftime("%H:%M %Z")
+            )
 
             # Transform raw provider fields into a more readable structure.
             city_results.append(
@@ -86,7 +98,7 @@ def run_ingestion_job():
                 }
             )
 
-        # Record a successful ingestion run.        
+        # Record a successful ingestion run.       
         run = {
             "source_name": "Open-Meteo API",
             "status": "success",
@@ -96,6 +108,8 @@ def run_ingestion_job():
             "error_message": None,
             "city_results": city_results,
         }
+
+        logger.info("Data ingestion job completed successfully records_fetched=%d", len(city_results))
 
     except Exception as e:
         # Record a failed ingestion run for operational visibility.
@@ -108,6 +122,13 @@ def run_ingestion_job():
             "error_message": str(e),
             "city_results": [],
         }
+        logger.exception("Data ingestion job failed city=%s", current_city)
 
     # Persist ingestion run metadata to PostgreSQL.
     save_ingestion_run(run)
+    
+    logger.info(
+        "Ingestion run saved to PostgreSQL status=%s records_fetched=%d",
+        run["status"],
+        run["records_fetched"],
+    )

@@ -1,5 +1,8 @@
+import logging
+import sys
 from contextlib import asynccontextmanager
 
+from pythonjsonlogger import jsonlogger
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
@@ -7,6 +10,21 @@ from app.database.connection import create_tables
 from app.database.repository import get_latest_ingestion_runs
 from app.scheduler import create_scheduler
 
+
+log_handler = logging.StreamHandler(sys.stdout)
+
+log_formatter = jsonlogger.JsonFormatter(
+    "%(asctime)s %(levelname)s %(name)s %(message)s"
+)
+
+log_handler.setFormatter(log_formatter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.handlers.clear()
+root_logger.addHandler(log_handler)
+
+logger = logging.getLogger(__name__)
 
 ############################################
 # Application lifecycle
@@ -20,19 +38,19 @@ async def lifespan(app: FastAPI):
     # Create database tables when the service starts.
     # This is acceptable for MVP/demo purposes.
     create_tables()
-    print("Database tables created")
+    logger.info("Database tables created")
 
     # Create and start the background scheduler.
     scheduler = create_scheduler()
     scheduler.start()
-    print("Scheduler started")
+    logger.info("Scheduler started interval_seconds=60")
 
     try:
         yield
     finally:
         # Shut down the scheduler cleanly when the app stops.
         scheduler.shutdown()
-        print("Scheduler stopped")
+        logger.info("Scheduler stopped")
 
 
 ############################################
@@ -79,7 +97,9 @@ def health():
 # - service status
 # - latest ingestion metadata
 @app.get("/dashboard")
-def dashboard(request: Request):
+def dashboard(request: Request):    
+    logger.info("Dashboard requested endpoint=/dashboard")
+
     # Fetch latest ingestion history from PostgreSQL.
     ingestion_runs = get_latest_ingestion_runs(limit=10)
     latest_run = ingestion_runs[0] if ingestion_runs else None
