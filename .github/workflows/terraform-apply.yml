@@ -25,6 +25,9 @@ jobs:
   apply:
     runs-on: ubuntu-latest
 
+    env:
+      TF_VAR_alarm_email: ${{ secrets.TF_VAR_ALARM_EMAIL }}
+
     ############################################
     # Environment protection
     ############################################
