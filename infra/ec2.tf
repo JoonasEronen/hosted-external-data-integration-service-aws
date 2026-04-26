@@ -19,6 +19,7 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
+
 ############################################
 # EC2 Application Instance
 ############################################
@@ -40,17 +41,20 @@ resource "aws_instance" "app_server_a" {
 #!/bin/bash
 set -e
 
+
 ############################################
 # Install runtime dependencies
 ############################################
 dnf update -y
-dnf install -y python3 python3-pip unzip awscli
+dnf install -y python3 python3-pip unzip awscli amazon-cloudwatch-agent
+
 
 ############################################
 # Prepare application directory
 ############################################
 mkdir -p /opt/app
 cd /opt/app
+
 
 ############################################
 # Write runtime environment configuration
@@ -67,6 +71,7 @@ DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
 AWS_REGION=${var.aws_region}
 ENVVARS
 
+
 ############################################
 # Create Python virtual environment
 ############################################
@@ -74,6 +79,12 @@ if [ ! -d /opt/app/.venv ]; then
 python3 -m venv /opt/app/.venv
 fi
 /opt/app/.venv/bin/pip install --upgrade pip       
+
+############################################
+# Prepare application log directory
+############################################
+mkdir -p /var/log/hosted-external-data-integration-service/${var.environment}/app
+chown -R ec2-user:ec2-user /var/log/hosted-external-data-integration-service
 
 
 ############################################
@@ -96,6 +107,9 @@ Environment="PATH=/opt/app/.venv/bin"
 
 ExecStart=/opt/app/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port ${var.app_port}
 
+StandardOutput=append:/var/log/hosted-external-data-integration-service/${var.environment}/app/app.log
+StandardError=append:/var/log/hosted-external-data-integration-service/${var.environment}/app/app.log
+
 Restart=always
 RestartSec=5
 
@@ -103,11 +117,43 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
+
 ############################################
 # Enable service
 ############################################
 systemctl daemon-reload
 systemctl enable p2-app     
+
+
+############################################
+# Configure CloudWatch Agent
+############################################
+mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<CWAGENT
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/hosted-external-data-integration-service/${var.environment}/app/app.log",
+            "log_group_name": "${aws_cloudwatch_log_group.app_logs.name}",
+            "log_stream_name": "{instance_id}/app"
+          }
+        ]
+      }
+    }
+  }
+}
+CWAGENT
+
+systemctl enable amazon-cloudwatch-agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+  -s
+
 
 ############################################
 # Create deploy script
@@ -138,6 +184,7 @@ DEPLOY
 
 chmod +x /opt/app/deploy_app.sh
 
+
 ############################################
 # Run initial deployment
 ############################################
@@ -153,6 +200,7 @@ EOF
     ManagedBy   = "terraform"
   }
 }
+
 
 ############################################
 # ALB Target Group Attachment
