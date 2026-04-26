@@ -1,6 +1,6 @@
 # Hosted External Data Integration Service (AWS)
 
-### Status: MVP working — production-style architecture (in progress)
+### Status: MVP working — production-style AWS service deployed
 
 - ALB routing to private EC2 working
 - FastAPI service deployed via artifact-based deployment
@@ -11,10 +11,11 @@
 - Private VPC architecture with NAT egress
 - Infrastructure deployed via Terraform
 - CI/CD artifact upload via GitHub Actions
+- CloudWatch logging enabled
+- Alarm notifications tested
 
 ### Next Iterations
 
-- Add production-level monitoring (CloudWatch logs and alarms)  
 - Expand architecture to multi-AZ high availability  
 - Finalize documentation  
 
@@ -60,8 +61,8 @@ Designed to simulate internal tooling used for monitoring continuously running c
 2. ALB routes traffic to a FastAPI application running on a private EC2 instance
 3. The application scheduler periodically fetches data from an external API via NAT Gateway
 4. Application stores historical data in Amazon RDS PostgreSQL
-5. Amazon CloudWatch provides logging and operational visibility
-6. Future iteration: CloudWatch alarms detect failures or unhealthy conditions
+5. Amazon CloudWatch collects logs and operational metrics
+6. CloudWatch alarms notify on unhealthy backend targets and high CPU usage
 
 In this project, a public API (such as weather data) is used only to simulate a continuous external data stream.  
 The weather data itself is not the goal of the system.
@@ -225,9 +226,11 @@ Current MVP infrastructure:
 - Application Load Balancer  
 - Private EC2 instance  
 - Security groups  
+- CloudWatch alarms
+- SNS email notifications
 
 Planned next:
-- CloudWatch alarms
+
 - Multi-AZ application tier
 
 Principles:
@@ -289,12 +292,13 @@ HTTP response through ALB:
 
 ## Operational Considerations
 
-Planned operational visibility:
+Implemented operational visibility:
 
 - Structured logs in CloudWatch  
 - Background ingestion logging  
 - Health endpoint  
 - CloudWatch alarms   
+- SNS email notifications
 
 Future additions:
 
@@ -346,7 +350,7 @@ Iteration 2:
 Application layer + database integration
 
 Iteration 3:
-Add production-level monitoring (CloudWatch logs and alarms)
+Implemented CloudWatch logs, alarms and SNS notifications
 
 Iteration 4:
 Expand to multi-AZ high availability
