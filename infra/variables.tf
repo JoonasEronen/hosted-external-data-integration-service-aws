@@ -1,6 +1,6 @@
-# =====================
+############################################
 # Project metadata
-# =====================
+############################################
 
 variable "project_name" {
   description = "Project name used in tags and resource naming."
@@ -20,9 +20,9 @@ variable "aws_region" {
   default     = "eu-north-1"
 }
 
-# =====================
+############################################
 # Networking
-# =====================
+############################################
 
 variable "vpc_cidr" {
   description = "CIDR block for the main VPC."
@@ -78,9 +78,9 @@ variable "az_b" {
   default     = "eu-north-1b"
 }
 
-# =====================
+############################################
 # Compute
-# =====================
+############################################
 
 variable "instance_type" {
   description = "EC2 instance type for the application server."
@@ -94,9 +94,9 @@ variable "app_port" {
   default     = 8000
 }
 
-# =====================
+#############################################
 # Database
-# =====================
+#############################################
 
 variable "db_identifier" {
   description = "RDS instance identifier"
@@ -126,4 +126,15 @@ variable "db_allocated_storage" {
   description = "Allocated storage size in GB for the PostgreSQL database."
   type        = number
   default     = 20
+}
+
+############################################
+# Alarm Notification Email
+############################################
+# Email address used for SNS alarm notifications.
+# Value should be supplied securely via tfvars or CI/CD secrets.
+
+variable "alarm_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
 }

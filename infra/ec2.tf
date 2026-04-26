@@ -19,7 +19,6 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-
 ############################################
 # EC2 Application Instance
 ############################################
@@ -41,7 +40,6 @@ resource "aws_instance" "app_server_a" {
 #!/bin/bash
 set -e
 
-
 ############################################
 # Install runtime dependencies
 ############################################
@@ -54,7 +52,6 @@ dnf install -y python3 python3-pip unzip awscli amazon-cloudwatch-agent
 ############################################
 mkdir -p /opt/app
 cd /opt/app
-
 
 ############################################
 # Write runtime environment configuration
@@ -71,7 +68,6 @@ DB_SECRET_ARN=${aws_db_instance.postgres.master_user_secret[0].secret_arn}
 AWS_REGION=${var.aws_region}
 ENVVARS
 
-
 ############################################
 # Create Python virtual environment
 ############################################
@@ -85,7 +81,6 @@ fi
 ############################################
 mkdir -p /var/log/hosted-external-data-integration-service/${var.environment}/app
 chown -R ec2-user:ec2-user /var/log/hosted-external-data-integration-service
-
 
 ############################################
 # Create systemd service
@@ -117,13 +112,11 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
-
 ############################################
 # Enable service
 ############################################
 systemctl daemon-reload
 systemctl enable p2-app     
-
 
 ############################################
 # Configure CloudWatch Agent
@@ -154,7 +147,6 @@ systemctl enable amazon-cloudwatch-agent
   -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
   -s
 
-
 ############################################
 # Create deploy script
 ############################################
@@ -184,7 +176,6 @@ DEPLOY
 
 chmod +x /opt/app/deploy_app.sh
 
-
 ############################################
 # Run initial deployment
 ############################################
@@ -200,7 +191,6 @@ EOF
     ManagedBy   = "terraform"
   }
 }
-
 
 ############################################
 # ALB Target Group Attachment

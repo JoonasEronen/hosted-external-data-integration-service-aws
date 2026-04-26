@@ -16,7 +16,6 @@ resource "aws_cloudwatch_log_group" "app_logs" {
   }
 }
 
-
 ############################################
 # CloudWatch Alarm: ALB Unhealthy Backend
 ############################################
@@ -41,11 +40,13 @@ resource "aws_cloudwatch_metric_alarm" "alb_no_healthy_hosts" {
     TargetGroup  = aws_lb_target_group.app_tg.arn_suffix
   }
 
+  alarm_actions = [aws_sns_topic.alarm_notifications.arn]
+  ok_actions    = [aws_sns_topic.alarm_notifications.arn]
+
   tags = {
     Name = "${var.project_name}-${var.environment}-alb-no-healthy-hosts"
   }
 }
-
 
 ############################################
 # CloudWatch Alarm: EC2 High CPU
@@ -70,7 +71,24 @@ resource "aws_cloudwatch_metric_alarm" "ec2_high_cpu" {
     InstanceId = aws_instance.app_server_a.id
   }
 
+  alarm_actions = [aws_sns_topic.alarm_notifications.arn]
+  ok_actions    = [aws_sns_topic.alarm_notifications.arn]
+
   tags = {
     Name = "${var.project_name}-${var.environment}-ec2-high-cpu"
   }
+}
+
+############################################
+# SNS Topic for CloudWatch Alarm Notifications
+############################################
+
+resource "aws_sns_topic" "alarm_notifications" {
+  name = "${var.project_name}-${var.environment}-alarm-notifications"
+}
+
+resource "aws_sns_topic_subscription" "alarm_email" {
+  topic_arn = aws_sns_topic.alarm_notifications.arn
+  protocol  = "email"
+  endpoint  = var.alarm_email
 }
