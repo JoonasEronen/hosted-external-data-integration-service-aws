@@ -19,8 +19,8 @@ resource "aws_cloudwatch_log_group" "app_logs" {
 ############################################
 # CloudWatch Alarm: ALB Unhealthy Backend
 ############################################
-# Triggers if the ALB has no healthy EC2 targets.
-# This indicates that the application is down or unreachable.
+# Triggers if the ALB target group has no healthy targets.
+# This indicates that all application instances are unhealthy or unreachable.
 
 resource "aws_cloudwatch_metric_alarm" "alb_no_healthy_hosts" {
   alarm_name          = "${var.project_name}-${var.environment}-alb-no-healthy-hosts"
@@ -51,11 +51,13 @@ resource "aws_cloudwatch_metric_alarm" "alb_no_healthy_hosts" {
 ############################################
 # CloudWatch Alarm: EC2 High CPU
 ############################################
-# Triggers when the EC2 application instance CPU usage
-# stays above 80% for multiple evaluation periods.
+# Creates one CPU alarm per EC2 instance using for_each.
+# Triggers when an instance's CPU utilization stays above 80%.
 
 resource "aws_cloudwatch_metric_alarm" "ec2_high_cpu" {
-  alarm_name          = "${var.project_name}-${var.environment}-ec2-high-cpu"
+  for_each = aws_instance.app_server
+
+  alarm_name          = "${var.project_name}-${var.environment}-${each.key}-ec2-high-cpu"
   alarm_description   = "EC2 application instance CPU utilization is above 80%."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -68,24 +70,30 @@ resource "aws_cloudwatch_metric_alarm" "ec2_high_cpu" {
   metric_name = "CPUUtilization"
 
   dimensions = {
-    InstanceId = aws_instance.app_server_a.id
+    InstanceId = each.value.id
   }
 
   alarm_actions = [aws_sns_topic.alarm_notifications.arn]
   ok_actions    = [aws_sns_topic.alarm_notifications.arn]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-ec2-high-cpu"
+    Name = "${var.project_name}-${var.environment}-${each.key}-ec2-high-cpu"
   }
 }
 
 ############################################
-# SNS Topic for CloudWatch Alarm Notifications
+# SNS Alarm Notifications
 ############################################
+# SNS topic used by CloudWatch alarms.
 
 resource "aws_sns_topic" "alarm_notifications" {
   name = "${var.project_name}-${var.environment}-alarm-notifications"
 }
+
+############################################
+# SNS Email Subscription
+############################################
+# Email address is provided via variable and not hardcoded.
 
 resource "aws_sns_topic_subscription" "alarm_email" {
   topic_arn = aws_sns_topic.alarm_notifications.arn

@@ -1,4 +1,8 @@
+############################################
+# VPC
+############################################
 # Main VPC for the external data integration service
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -18,9 +22,9 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# -----------------------------
+############################################
 # Public subnets (ALB layer)
-# -----------------------------
+############################################
 
 # Public subnet in AZ A for internet-facing components (ALB, NAT)
 resource "aws_subnet" "public_subnet_a" {
@@ -46,11 +50,11 @@ resource "aws_subnet" "public_subnet_b" {
   }
 }
 
-# -----------------------------
+############################################
 # Private application subnets
-# -----------------------------
+############################################
 
-# Private application subnet in AZ A for EC2 app tier
+# Private application subnet in AZ A for multi-AZ app tier
 resource "aws_subnet" "private_app_subnet_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_app_subnet_a_cidr
@@ -61,7 +65,7 @@ resource "aws_subnet" "private_app_subnet_a" {
   }
 }
 
-# Private application subnet in AZ B for future multi-AZ app tier
+# Private application subnet in AZ B for multi-AZ app tier
 resource "aws_subnet" "private_app_subnet_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_app_subnet_b_cidr
@@ -72,9 +76,9 @@ resource "aws_subnet" "private_app_subnet_b" {
   }
 }
 
-# -----------------------------
+############################################
 # Private database subnets
-# -----------------------------
+############################################
 
 # Private database subnet in AZ A
 resource "aws_subnet" "private_db_subnet_a" {
@@ -87,7 +91,7 @@ resource "aws_subnet" "private_db_subnet_a" {
   }
 }
 
-# Private database subnet in AZ B (for future RDS multi-AZ)
+# Private database subnet in AZ B for RDS Multi-AZ
 resource "aws_subnet" "private_db_subnet_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_db_subnet_b_cidr
@@ -98,9 +102,9 @@ resource "aws_subnet" "private_db_subnet_b" {
   }
 }
 
-# -----------------------------
+############################################
 # Route tables
-# -----------------------------
+############################################
 
 # Public route table for internet-facing resources
 resource "aws_route_table" "public_route_table" {
@@ -126,8 +130,8 @@ resource "aws_eip" "nat_eip_a" {
 }
 
 # Single NAT Gateway in AZ A
-# Used by private subnets in both AZs to keep MVP simple and reduce cost.
-# Can be expanded later to one NAT Gateway per AZ.
+# Trade-off: reduces cost but creates a single point of failure for outbound internet access.
+# Can be expanded later to one NAT Gateway per AZ for full network-level HA.
 resource "aws_nat_gateway" "nat_gateway_a" {
   allocation_id = aws_eip.nat_eip_a.id
   subnet_id     = aws_subnet.public_subnet_a.id
@@ -163,9 +167,9 @@ resource "aws_route_table" "private_db_route_table" {
   }
 }
 
-# -----------------------------
+############################################
 # Route table associations
-# -----------------------------
+############################################
 
 # Public subnets -> public route table
 resource "aws_route_table_association" "public_subnet_a" {

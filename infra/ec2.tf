@@ -1,7 +1,7 @@
 ############################################
 # Amazon Linux 2023 AMI
 ############################################
-# Use the latest Amazon Linux 2023 AMI in the selected region
+# Use the latest Amazon Linux 2023 AMI in the selected region.
 
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
@@ -22,15 +22,34 @@ data "aws_ami" "amazon_linux_2023" {
 ############################################
 # EC2 Application Instance
 ############################################
-# Application-tier EC2 instance running in the private app subnet.
+# Application-tier EC2 instances running in private app subnets.
+# Multiple instances are created using for_each for high availability across AZs.
 # IAM instance profile is attached so the application can read:
-# - deployment artifacts from S3
-# - database secret from AWS Secrets Manager at runtime
+# - deployment artifacts from S3.
+# - database secret from AWS Secrets Manager at runtime.
 
-resource "aws_instance" "app_server_a" {
+# Define application instances across multiple Availability Zones.
+# Used with for_each to create multiple EC2 instances without duplication.
+locals {
+  app_servers = {
+    app_server_a = {
+      name      = "app-server-a"
+      subnet_id = aws_subnet.private_app_subnet_a.id
+    }
+
+    app_server_b = {
+      name      = "app-server-b"
+      subnet_id = aws_subnet.private_app_subnet_b.id
+    }
+  }
+}
+
+resource "aws_instance" "app_server" {
+  for_each = local.app_servers
+
   ami                         = data.aws_ami.amazon_linux_2023.id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.private_app_subnet_a.id
+  subnet_id                   = each.value.subnet_id
   vpc_security_group_ids      = [aws_security_group.app_sg.id]
   associate_public_ip_address = false
 
@@ -186,7 +205,7 @@ EOF
 
 
   tags = {
-    Name        = "app-server-a"
+    Name        = each.value.name
     Environment = var.environment
     ManagedBy   = "terraform"
   }
@@ -195,10 +214,13 @@ EOF
 ############################################
 # ALB Target Group Attachment
 ############################################
-# Register the EC2 instance as a target behind the Application Load Balancer
+# Register each EC2 application instance as a target behind the ALB.
+# Uses for_each to automatically attach all instances.
 
-resource "aws_lb_target_group_attachment" "app_server_a" {
+resource "aws_lb_target_group_attachment" "app_server" {
+  for_each = aws_instance.app_server
+
   target_group_arn = aws_lb_target_group.app_tg.arn
-  target_id        = aws_instance.app_server_a.id
+  target_id        = each.value.id
   port             = var.app_port
 }
