@@ -24,8 +24,6 @@ jobs:
     # Only run plan when the PR branch belongs to the same repository.
     # This avoids credential issues and unsafe execution from forks.
     if: github.event.pull_request.head.repo.full_name == github.repository
-
-    environment: dev
     
     runs-on: ubuntu-latest
 
