@@ -15,7 +15,7 @@ variable "environment" {
 }
 
 variable "aws_region" {
-  description = "AWS region for all resources."
+  description = "AWS region where all resources are deployed."
   type        = string
   default     = "eu-north-1"
 }
@@ -94,12 +94,12 @@ variable "app_port" {
   default     = 8000
 }
 
-#############################################
+############################################
 # Database
-#############################################
+############################################
 
 variable "db_identifier" {
-  description = "RDS instance identifier"
+  description = "RDS instance identifier."
   type        = string
   default     = "p2-postgres"
 }
@@ -135,6 +135,6 @@ variable "db_allocated_storage" {
 # Value should be supplied securely via tfvars or CI/CD secrets.
 
 variable "alarm_email" {
-  description = "Email address for CloudWatch alarm notifications"
+  description = "Email address for CloudWatch alarm notifications."
   type        = string
 }

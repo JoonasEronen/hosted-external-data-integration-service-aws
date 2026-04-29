@@ -25,10 +25,10 @@ resource "aws_db_subnet_group" "rds" {
 # RDS PostgreSQL Instance
 ############################################
 # Private PostgreSQL database for the application.
-# - Not publicly accessible
-# - Runs in private DB subnets
-# - Only accessible from EC2 security group
-# - Single-AZ for MVP (HA in later iteration)
+# - Not publicly accessible.
+# - Deployed in private database subnets.
+# - Accessible only from the EC2 application security group.
+# - Multi-AZ enabled for high availability.
 
 resource "aws_db_instance" "postgres" {
   identifier = var.db_identifier
@@ -37,7 +37,7 @@ resource "aws_db_instance" "postgres" {
   engine         = "postgres"
   engine_version = "17.9"
 
-  # Instance sizing (small for MVP)
+  # Instance sizing (small for MVP).
   instance_class    = var.db_instance_class
   allocated_storage = var.db_allocated_storage
   storage_type      = "gp3"
@@ -55,8 +55,8 @@ resource "aws_db_instance" "postgres" {
   publicly_accessible = false
   storage_encrypted   = true
 
-  # Availability
-  multi_az = false # V1: single AZ, HA later
+  # Availability (Multi-AZ high availability).
+  multi_az = true
 
   # Lifecycle (dev friendly)
   skip_final_snapshot = true
