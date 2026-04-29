@@ -25,6 +25,8 @@ jobs:
     # This avoids credential issues and unsafe execution from forks.
     if: github.event.pull_request.head.repo.full_name == github.repository
 
+    environment: dev
+    
     runs-on: ubuntu-latest
 
     permissions:
@@ -87,6 +89,8 @@ jobs:
       # can still be commented back to the PR.
       - name: Terraform plan
         id: plan
+        env:
+          TF_VAR_alarm_email: ${{ secrets.TF_VAR_ALARM_EMAIL }}
         run: terraform plan -no-color -input=false
         continue-on-error: true
 
