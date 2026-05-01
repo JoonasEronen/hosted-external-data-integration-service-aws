@@ -1,117 +1,107 @@
 # Hosted External Data Integration Service (AWS)
 
-### Status: MVP working — production-style AWS service deployed
+### Status: Production-style AWS service deployed and validated
 
-- ALB routing to private EC2 working
-- FastAPI service deployed via artifact-based deployment
-- Scheduler running background ingestion
-- External API ingestion working
+- ALB routing to private EC2 instances working
+- Multi-AZ failover tested
+- Background ingestion operational
+- External API integration working
 - Data stored in RDS PostgreSQL
-- Operational dashboard implemented
-- Private VPC architecture with NAT egress
-- Infrastructure deployed via Terraform
-- CI/CD artifact upload via GitHub Actions
-- CloudWatch logging enabled
-- Alarm notifications tested
-
-### Next Iterations
-
-- Expand architecture to multi-AZ high availability  
-- Finalize documentation  
-
----
+- CloudWatch monitoring and alarms validated
 
 ## Goal
 
 Fetch → store → monitor → visualize external operational data in a production-style AWS environment.
 
-This project demonstrates a realistic cloud service pattern commonly used for:
+This project implements a realistic cloud service pattern commonly used for:
 
 - Third-party API integrations  
 - Operational data ingestion  
 - Scheduled background data collection  
 - Internal dashboards and reporting services  
 
-The focus is on **clean architecture, networking fundamentals, automation, and observability**, not on building a full product.
+The focus is on **clean architecture, networking fundamentals, automation, and observability**, rather than building a full end-user product.
 
 ---
 
 ## Dashboard Overview
 
-![Dashboard Overview](docs/images/dashboard-overview-hosted-external-data-integration-service.png)
+![Dashboard Overview](docs/images/dashboard-operational-view.png)
 
-Production-style operational dashboard providing real-time visibility into:
+Production-style operational dashboard providing real-time visibility into system behavior:
 
-- Service status and latest ingestion result  
-- Background ingestion activity  
+- Current service status and latest ingestion result  
+- Background ingestion activity and scheduling  
 - Latest external data snapshot  
-- Historical ingestion runs  
+- Historical ingestion runs and trends  
 
-Designed to simulate internal tooling used for monitoring continuously running cloud services.
+Designed to simulate internal operational tooling used to monitor continuously running cloud services and diagnose failures.
 
 ---
 
 ## Architecture Overview
 
-![Architecture](docs/architecture/architecture-v1-multi-az-mvp.png)
+![Architecture](docs/architecture/architecture-v2-multi-az.png)
 
 ### Flow
 
-1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)
-2. ALB routes traffic to a FastAPI application running on a private EC2 instance
-3. The application scheduler periodically fetches data from an external API via NAT Gateway
-4. Application stores historical data in Amazon RDS PostgreSQL
-5. Amazon CloudWatch collects logs and operational metrics
-6. CloudWatch alarms notify on unhealthy backend targets and high CPU usage
+1. User accesses the dashboard via HTTPS through the Application Load Balancer (ALB)  
+2. ALB routes traffic to FastAPI application instances running on private EC2 instances  
+3. A background scheduler within the application periodically fetches data from an external API via the NAT Gateway  
+4. The application stores historical data in Amazon RDS PostgreSQL  
+5. Amazon CloudWatch collects logs and operational metrics  
+6. CloudWatch alarms notify on unhealthy backend targets and resource thresholds (e.g. CPU usage)  
 
 In this project, a public API (such as weather data) is used only to simulate a continuous external data stream.  
-The weather data itself is not the goal of the system.
+The data itself is not the focus of the system.
 
-The purpose is to demonstrate a realistic external API integration pattern where a service periodically ingests data from third-party providers, stores historical records, and exposes operational visibility.
+The purpose is to demonstrate a realistic external API integration pattern, where a service periodically ingests data from third-party providers, stores historical records, and provides operational visibility.
 
-The same architecture could be used for:
+This architecture can be applied to:
 
 - Partner integrations  
 - Price monitoring  
 - Operational metrics collection  
 - IoT data ingestion  
-- Analytics feeds  
-- Business reporting pipelines  
+- Analytics pipelines  
+- Business reporting systems  
 
 ---
 
 ## Problem Statement
 
-Build a continuously running service that securely ingests external third-party data, stores historical records, and exposes that data through a dashboard — without placing the application server directly on the public internet.
+Design and implement a continuously running service that securely ingests external third-party data, stores historical records, and exposes that data through a dashboard — without placing the application server directly on the public internet.
 
-This mirrors real-world systems where:
+This reflects real-world systems where:
 
 - External APIs must be polled periodically  
 - Services must run continuously  
-- Application servers should not be public  
-- Data must be stored and queried later  
-- Operational visibility is required  
+- Application servers should not be publicly exposed  
+- Data must be stored and queried over time  
+- Operational visibility is required for monitoring and debugging  
 
 ---
 
 ## First Principles Breakdown
 
-### What is the simplest system that solves the problem?
+### What is the simplest system that satisfies the requirements?
+
+A minimal viable architecture must include:
 
 1. **Secure public entry point**  
-Users need an HTTPS endpoint to access the dashboard.
+An HTTPS endpoint for accessing the service.
 
 2. **Always-on compute**  
-The service must run continuously to both serve UI and ingest data.
+Continuous runtime to serve the dashboard and perform background ingestion.
 
 3. **Controlled outbound internet access**  
-The application must call external APIs securely.
+Ability to securely call external APIs from a private environment.
 
 4. **Persistent storage**  
-Historical data must be stored for reporting and visualization.
+A database for storing and querying historical data.
 
 5. **Operational visibility**  
-Logs and alarms are required for debugging and monitoring.
+Logging and monitoring to observe system behavior and detect failures.
 
 ---
 
@@ -134,7 +124,7 @@ These systems typically require:
 - Controlled networking  
 - Observability  
 
-This project models a **hosted external data integration service** that solves these requirements.
+This project implements a **hosted external data integration service** designed to handle these requirements in a controlled, production-style AWS environment.
 
 ---
 
@@ -143,8 +133,8 @@ This project models a **hosted external data integration service** that solves t
 - Always-on EC2 compute (chosen instead of serverless to model continuously running integration services)  
 - Predictable baseline cost  
 - Suitable for continuous ingestion services  
-- Scales vertically or via multi-AZ expansion  
-- Can later add Auto Scaling  
+- Scales vertically and can be extended to handle higher load with additional instances
+- Can be extended with Auto Scaling for dynamic capacity management 
 
 This architecture trades **higher baseline cost** for **more realistic hosted service design**.
 
@@ -155,59 +145,58 @@ This architecture trades **higher baseline cost** for **more realistic hosted se
 ### Application Load Balancer instead of public EC2
 
 Pros:
-- Application server not exposed to internet  
-- Ready for multi-AZ expansion  
-- Realistic production pattern  
+- Application server not exposed to the internet  
+- Built-in load balancing and health checks  
+- Ready for multi-AZ deployment  
 
 Trade-off:
-- Adds infrastructure complexity
+- Adds infrastructure complexity and cost compared to a single public instance  
 
 ---
 
-### Private EC2 instance
+### Private EC2 instances
 
 Pros:
-- No public IP  
-- Controlled inbound access  
-- Secure architecture  
+- No public IP exposure  
+- Controlled inbound access via ALB  
+- More secure architecture  
 
 Trade-off:
-- Requires NAT Gateway for outbound access
+- Requires additional components (NAT Gateway) for outbound internet access  
 
 ---
 
 ### NAT Gateway for outbound API access
 
 Pros:
-- Private EC2 can call external APIs  
-- Keeps application tier private  
+- Enables secure outbound internet access from private subnets  
+- Keeps application layer fully private  
 
 Trade-off:
-- Adds recurring cost
+- Adds recurring cost and becomes a single point of egress  
 
 ---
 
 ### RDS PostgreSQL for storage
 
 Pros:
-- Structured relational data  
-- Historical records  
-- Realistic service backend  
+- Structured relational data model  
+- Supports historical data and queries  
+- Realistic production backend  
 
 Trade-off:
-- More complex than simple storage
+- Higher operational complexity compared to simpler storage solutions  
 
 ---
 
-### Multi-AZ network with single-instance MVP
+### Multi-AZ network design
 
 Pros:
-- Realistic production VPC layout  
-- Future-ready for high availability  
-- Faster MVP implementation  
+- Infrastructure distributed across multiple Availability Zones  
+- Enables higher resilience and failure isolation  
 
 Trade-off:
-- Application tier not highly available yet
+- Increased cost and architectural complexity compared to a single-AZ setup, while full elasticity (e.g. Auto Scaling) was intentionally not implemented
 
 ---
 
@@ -215,7 +204,7 @@ Trade-off:
 
 All infrastructure is defined using **Terraform**.
 
-Current MVP infrastructure:
+Provisioned infrastructure:
 
 - VPC  
 - Public subnets (multi-AZ)  
@@ -224,21 +213,19 @@ Current MVP infrastructure:
 - NAT Gateway  
 - Route tables  
 - Application Load Balancer  
-- Private EC2 instance  
+- EC2 application instances (deployed across multiple Availability Zones)  
 - Security groups  
-- CloudWatch alarms
-- SNS email notifications
-
-Planned next:
-
-- Multi-AZ application tier
+- CloudWatch alarms  
+- SNS email notifications  
 
 Principles:
 
 - Reproducible deployments  
 - Least-privilege IAM  
 - Clear network boundaries  
-- CI/CD deployment workflow  
+- CI/CD-driven infrastructure workflow  
+
+Infrastructure deployments are managed via GitHub Actions using OIDC authentication, with approval-gated Terraform apply workflows.
 
 ---
 
@@ -246,7 +233,7 @@ Principles:
 
 This project is designed to be deployed via GitHub Actions using Terraform.
 
-Pipeline goals:
+Pipeline characteristics:
 
 - Pull Request terraform plan  
 - Validation before merge  
@@ -271,95 +258,89 @@ This models a **production-style infrastructure workflow**.
 
 ---
 
-## MVP Deployment Check
+## Proof of Deployment & Failure Testing
 
-Initial infrastructure MVP validated after Terraform deployment.
+### 1. Normal operation
+- ALB routing to private EC2 instances
+- Target group healthy
+- Dashboard accessible
 
-- Application Load Balancer deployed
-- Private EC2 instance registered behind the ALB
-- Target group health check passing
-- End-to-end HTTP request returned `200 OK`
+![Target healthy](docs/proof/alb-all-targets-healthy.png)
 
-Target group health:
+### 2. Failure scenario: EC2 instance failure
 
-![Target healthy](docs/proof/mvp-target-group-healthy.png)
+One application instance was manually stopped to simulate infrastructure failure.
 
-HTTP response through ALB:
+- ALB detected unhealthy target
+- Traffic routed to remaining healthy instance
+- Service remained available
 
-![HTTP 200](docs/proof/mvp-http-200.png)
+![Failure scenario](docs/proof/alb-failover-one-target-unhealthy.png)
 
----
+### 3. Result
 
-## Operational Considerations
+- No user-visible downtime observed
+- ALB health checks successfully removed unhealthy target
+- System continued serving traffic
 
-Implemented operational visibility:
-
-- Structured logs in CloudWatch  
-- Background ingestion logging  
-- Health endpoint  
-- CloudWatch alarms   
-- SNS email notifications
-
-Future additions:
-
-- Error rate alarms  
-- Multi-AZ application tier  
-- Auto Scaling  
-- Advanced monitoring  
+This test validates the system’s ability to handle instance-level failures without user-visible downtime.
 
 ---
 
-## Intentional Scope Limitations
+## Operational Visibility
 
-Not included in MVP:
+The system includes production-style monitoring and observability:
 
-- Multi-AZ application tier
-- Auto Scaling Group  
-- Advanced authentication  
-- Complex frontend  
-- Production SLA setup  
-- Advanced alerting  
+- Structured application logs in CloudWatch  
+- Background ingestion logging for scheduled jobs  
+- Health endpoint for service status checks  
+- CloudWatch alarms for infrastructure and application health  
+- SNS email notifications for alerting  
 
-This project is designed as a **production-style MVP**, not a full system.
+This provides real-time visibility into system behavior and failure conditions.
+
+---
+
+## Scope and Design Decisions
+
+This project intentionally focuses on core cloud engineering fundamentals:
+
+- VPC networking and private infrastructure design  
+- Application Load Balancer ingress and controlled traffic flow  
+- Always-on compute architecture (EC2)  
+- External API ingestion pattern  
+- Persistent storage with RDS  
+- Observability with CloudWatch and alerting  
+
+To maintain focus and clarity, the following production features were intentionally excluded:
+
+- Auto Scaling Group for dynamic capacity management   
+- Advanced authentication and access control  
+- Complex frontend or UI framework  
+- Defined service-level targets (SLA/SLO)  
+- Advanced alerting and tracing  
+
+This reflects a deliberate engineering trade-off: prioritizing foundational architecture, networking, and observability over full production complexity.
+
+The system was validated using multiple EC2 instances behind an Application Load Balancer, including instance failure testing to verify resilience.
 
 ---
 
 ## Engineering Commentary
 
-This project intentionally demonstrates a different cloud pattern than Project 1.
+This project demonstrates a production-style evolution from a simple network foundation to a monitored, multi-instance cloud service.
 
-Project 1:
-- Serverless
-- Event-driven
-- No VPC networking
+Development approach:
 
-Project 2:
-- Always-on service
-- VPC networking
-- Private compute
-- ALB ingress
-- NAT egress
-- Stateful database
+- Network foundation and secure ingress (VPC, ALB, private subnets)  
+- Application deployment and database integration (EC2 + RDS)  
+- Observability layer (CloudWatch logs, alarms, SNS notifications)  
+- High availability validation through multi-AZ failover testing  
 
-The project is intentionally built in **iterations**:
-
-Iteration 1:
-Network foundation + single-instance application ingress
-
-Iteration 2:
-Application layer + database integration
-
-Iteration 3:
-Implemented CloudWatch logs, alarms and SNS notifications
-
-Iteration 4:
-Expand to multi-AZ high availability
-
-Iteration 5:
-Finalize documentation
+This iterative approach reflects how real-world systems are gradually evolved rather than built all at once.
 
 ---
 
 ## Project Summary
 
-This project represents a **production-style hosted external data integration service** built inside an AWS VPC with controlled networking, persistent storage, and operational monitoring.
+This project implements a **production-style hosted external data integration service** built inside an AWS VPC with controlled networking, persistent storage, and operational monitoring.
